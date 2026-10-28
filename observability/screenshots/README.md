@@ -7,7 +7,8 @@
 | File | Shows | Status |
 |---|---|---|
 | `01-pods-helm.png` | `helm list -A` (3 releases deployed) and `kubectl get pods -A` (all Running, Grafana 3/3) | ✅ captured |
-| `02-grafana-golden-signals.png` | "Robot Shop — Golden Signals (Request Rate, Error Rate, Latency)" with live data, last 30 min | ⬜ author: http://localhost:3000 |
+| `02-grafana-golden-signals.png` | "Robot Shop — Golden Signals (Request Rate, Error Rate, Latency)", last 30 min in UTC, about 23:40: all four targets UP, request rates by service and route, 5xx panels (those include payment's deliberate load-generator errors). The flat gap from about 23:12 to 23:28 is host Modern Standby (Windows System log: 23:11:40 to 23:28:27 UTC), not a service fault | ✅ captured by the author |
+| `02b-grafana-errors-latency.png` | Lower half of the same dashboard (last 30 min, UTC): 5xx rate and ratio by service, with **cart and catalogue at 0%** and only payment showing errors (about 49% mean, its deliberate load-generator `ERROR="1"` traffic, outside the SLO); p95 and p50/p95/p99 latency. The latency spike at about 23:29 follows the host waking from standby at 23:28:27 | ✅ captured by the author |
 | `03-grafana-drill-window.png` | Same dashboard, time range 19:45–21:00: two error spikes (drills about 19:53 and 20:40) | ⬜ author |
 | `04-prometheus-targets.png` | Targets: cart, catalogue, payment (robot-shop-app-services 3/3) and web (robot-shop-web-nginx 1/1) all UP | ✅ captured |
 | `05-prometheus-rules.png` | `robot-shop-availability-slo.alerts` and `.recording` groups, all rules OK | ✅ captured |
