@@ -33,7 +33,14 @@
 - `observability/incident-drill/evidence/run2-slack/06-recovery-check.txt`: 1m vs 5m error ratios around the alert resolving, current health, and dependency checks (Redis `PONG`, MongoDB `ping`).
 - `observability/incident-drill/evidence/run2-slack/07-traffic-check.txt`: traffic by service; shows the monitoring gap from host Modern Standby (20:46:31–21:21:42 UTC per the Windows System log, with scrapes missing from about 20:57).
 
+## Final validation
+
+- `observability/final-validation.sh` writes `observability/incident-drill/evidence/final-validation.txt` (run 2026-10-28 21:52 UTC).
+- That run found Grafana unready (2/3, 18 restarts) because of its 200m CPU / 256Mi limits. Fixed by raising them to 1000m / 512Mi in `kube-prometheus-stack-values.yaml` (kube-prometheus-stack revision 4, 21:53 UTC). The new pod was 3/3 Ready with 0 restarts.
+
 ## Screenshots to capture
+
+Save them in `observability/screenshots/` with the file names listed in its [README](screenshots/README.md).
 
 1. `kubectl -n robot-shop get pods` (all Running) and `helm list -A`.
 2. Grafana Golden Signals dashboard, healthy, and during the drill window (19:52–20:15 UTC on 2026-10-28).

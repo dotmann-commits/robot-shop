@@ -57,13 +57,15 @@ grafana:
       searchNamespace: ALL
     datasources:
       enabled: true
+  # Raised from 200m/256Mi: at that size Grafana's internal API calls timed out, readiness
+  # probes failed and the pod restarted 18 times (observed 2026-10-28).
   resources:
     requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 200m
+      cpu: 100m
       memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
 
 alertmanager:
   alertmanagerSpec:
