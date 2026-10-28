@@ -21,14 +21,18 @@ spec:
       - name: cart
         image: {{ .Values.image.repo }}/rs-cart:{{ .Values.image.version }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        # agent networking access
         env:
-          - name: INSTANA_AGENT_HOST
-            valueFrom:
-              fieldRef:
-                fieldPath: status.hostIP
+        - name: OTEL_SERVICE_NAME
+          value: "cart"
+        - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+          value: "http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces"
         ports:
         - containerPort: 8080
+        volumeMounts:
+        - name: metrics-instrumentation
+          mountPath: /opt/server/server.js
+          subPath: cart-server.js
+          readOnly: true
         resources:
           limits:
             cpu: 200m
@@ -36,6 +40,10 @@ spec:
           requests:
             cpu: 100m
             memory: 50Mi
+      volumes:
+      - name: metrics-instrumentation
+        configMap:
+          name: robot-shop-metrics-instrumentation
       {{- with .Values.cart.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

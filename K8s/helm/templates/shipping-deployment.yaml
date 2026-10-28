@@ -21,12 +21,32 @@ spec:
       - name: shipping
         image: {{ .Values.image.repo }}/rs-shipping:{{ .Values.image.version }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: MALLOC_ARENA_MAX
+          value: "2"
+        command:
+        - java
+        - -XX:ActiveProcessorCount=2
+        - -XX:+UseG1GC
+        - -XX:+UseStringDeduplication
+        - -Xms256m
+        - -Xmx576m
+        - -Xss384k
+        - -XX:MaxMetaspaceSize=96m
+        - -XX:CompressedClassSpaceSize=32m
+        - -XX:ReservedCodeCacheSize=48m
+        - -XX:+ExitOnOutOfMemoryError
+        - -jar
+        - shipping.jar
+        - --spring.jpa.open-in-view=false
+        - --spring.jpa.properties.hibernate.query.read_only=true
+        - --server.tomcat.max-threads=4
         ports:
         - containerPort: 8080
         # it's Java it needs lots of memory
         resources:
           limits:
-            cpu: 200m
+            cpu: 1000m
             memory: 1000Mi
           requests:
             cpu: 100m
@@ -37,7 +57,17 @@ spec:
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 5
+          timeoutSeconds: 5
           failureThreshold: 30
+          successThreshold: 1
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 150
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
           successThreshold: 1
       restartPolicy: Always
       {{- with .Values.shipping.affinity }}

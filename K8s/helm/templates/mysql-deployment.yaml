@@ -21,6 +21,7 @@ spec:
       - name: mysql
         image: {{ .Values.image.repo }}/rs-mysql-db:{{ .Values.image.version }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/bin/sh", "-c", "ulimit -n 65536 && exec docker-entrypoint.sh mysqld"]
         # added for Istio
         securityContext:
           capabilities:

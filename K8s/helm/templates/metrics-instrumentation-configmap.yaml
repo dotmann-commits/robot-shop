@@ -1,0 +1,1332 @@
+# Project-Created File (NOT Instructor-Provided)
+# Repository: dotmann-commits/robot-shop
+# Purpose: ConfigMap-mounted Golden Signals HTTP metrics + OpenTelemetry OTLP/HTTP distributed tracing
+# for payment (Flask), cart (Express + prom-client), and catalogue (Express).
+# Preserves all original business metrics, propagates W3C traceparent headers across services,
+# and avoids sensitive data or high-cardinality labels.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: robot-shop-metrics-instrumentation
+  labels:
+    app: robot-shop
+data:
+  payment.py: |
+    import random
+
+    import instana
+    import os
+    import sys
+    import time
+    import logging
+    import uuid
+    import json
+    import threading
+    import urllib.request
+    import requests
+    import traceback
+    from flask import Flask
+    from flask import Response
+    from flask import request
+    from flask import jsonify
+    from rabbitmq import Publisher
+    # Prometheus
+    import prometheus_client
+    from prometheus_client import Counter, Histogram
+
+    app = Flask(__name__)
+    app.logger.setLevel(logging.INFO)
+
+    CART = os.getenv('CART_HOST', 'cart')
+    USER = os.getenv('USER_HOST', 'user')
+    PAYMENT_GATEWAY = os.getenv('PAYMENT_GATEWAY', 'https://paypal.com/')
+    OTEL_SERVICE_NAME = os.getenv('OTEL_SERVICE_NAME', 'payment')
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = os.getenv(
+        'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT',
+        'http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces'
+    )
+
+    # Prometheus (Preserved Business Metrics + Golden Signals HTTP Metrics)
+    PromMetrics = {}
+    PromMetrics['SOLD_COUNTER'] = Counter('sold_count', 'Running count of items sold')
+    PromMetrics['AUS'] = Histogram('units_sold', 'Avergae Unit Sale', buckets=(1, 2, 5, 10, 100))
+    PromMetrics['AVS'] = Histogram('cart_value', 'Avergae Value Sale', buckets=(100, 200, 500, 1000, 2000, 5000, 10000))
+    PromMetrics['HTTP_REQUESTS'] = Counter(
+        'http_requests_total',
+        'Total HTTP requests processed',
+        ['method', 'route', 'status']
+    )
+    PromMetrics['HTTP_DURATION'] = Histogram(
+        'http_request_duration_seconds',
+        'HTTP request latency in seconds',
+        ['method', 'route', 'status'],
+        buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+    )
+
+
+    def parse_traceparent(header_val):
+        if not header_val:
+            return None, None
+        parts = header_val.strip().split('-')
+        if len(parts) == 4 and len(parts[1]) == 32 and len(parts[2]) == 16:
+            return parts[1], parts[2]
+        return None, None
+
+
+    def otel_attr(key, val):
+        if isinstance(val, bool):
+            return {'key': key, 'value': {'boolValue': val}}
+        if isinstance(val, int):
+            return {'key': key, 'value': {'intValue': str(val)}}
+        return {'key': key, 'value': {'stringValue': str(val)}}
+
+
+    def export_otel_spans_async(spans):
+        if not spans:
+            return
+        payload = {
+            'resourceSpans': [{
+                'resource': {
+                    'attributes': [
+                        otel_attr('service.name', OTEL_SERVICE_NAME),
+                        otel_attr('service.namespace', 'robot-shop'),
+                        otel_attr('telemetry.sdk.language', 'python')
+                    ]
+                },
+                'scopeSpans': [{
+                    'scope': {
+                        'name': 'robot-shop.opentelemetry.http',
+                        'version': '1.0.0'
+                    },
+                    'spans': spans
+                }]
+            }]
+        }
+        body = json.dumps(payload).encode('utf-8')
+
+        def _send():
+            try:
+                req_obj = urllib.request.Request(
+                    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+                    data=body,
+                    headers={'Content-Type': 'application/json'},
+                    method='POST'
+                )
+                with urllib.request.urlopen(req_obj, timeout=1.5) as _:
+                    pass
+            except Exception:
+                pass
+
+        t = threading.Thread(target=_send, daemon=True)
+        t.start()
+
+
+    @app.before_request
+    def start_timer():
+        request._prom_start_time = time.time()
+        request._otel_start_ns = time.time_ns()
+        trace_id, parent_span_id = parse_traceparent(request.headers.get('traceparent'))
+        if not trace_id:
+            trace_id = os.urandom(16).hex()
+        request._otel_trace_id = trace_id
+        request._otel_parent_span_id = parent_span_id or ''
+        request._otel_span_id = os.urandom(8).hex()
+        request._otel_child_spans = []
+
+
+    @app.after_request
+    def record_request_metrics(response):
+        if request.path != '/metrics':
+            duration = max(time.time() - getattr(request, '_prom_start_time', time.time()), 0.0)
+            if request.url_rule and request.url_rule.rule:
+                route = request.url_rule.rule.replace('<', ':').replace('>', '')
+            else:
+                route = 'unmatched'
+            status = str(response.status_code)
+            PromMetrics['HTTP_REQUESTS'].labels(request.method, route, status).inc()
+            PromMetrics['HTTP_DURATION'].labels(request.method, route, status).observe(duration)
+
+            if request.path != '/health':
+                end_ns = time.time_ns()
+                start_ns = getattr(request, '_otel_start_ns', end_ns)
+                trace_id = getattr(request, '_otel_trace_id', os.urandom(16).hex())
+                span_id = getattr(request, '_otel_span_id', os.urandom(8).hex())
+                parent_span_id = getattr(request, '_otel_parent_span_id', '')
+                root_span = {
+                    'traceId': trace_id,
+                    'spanId': span_id,
+                    'name': f'{request.method} {route}',
+                    'kind': 2,
+                    'startTimeUnixNano': str(start_ns),
+                    'endTimeUnixNano': str(max(end_ns, start_ns + 1000)),
+                    'attributes': [
+                        otel_attr('http.method', request.method),
+                        otel_attr('http.route', route),
+                        otel_attr('http.status_code', int(response.status_code))
+                    ],
+                    'status': {
+                        'code': 2 if response.status_code >= 500 else 1
+                    }
+                }
+                if parent_span_id:
+                    root_span['parentSpanId'] = parent_span_id
+                spans = [root_span] + getattr(request, '_otel_child_spans', [])
+                export_otel_spans_async(spans)
+        return response
+
+
+    @app.errorhandler(Exception)
+    def exception_handler(err):
+        app.logger.error(str(err))
+        return str(err), 500
+
+    @app.route('/health', methods=['GET'])
+    def health():
+        return 'OK'
+
+    # Prometheus
+    @app.route('/metrics', methods=['GET'])
+    def metrics():
+        res = []
+        for m in PromMetrics.values():
+            res.append(prometheus_client.generate_latest(m))
+
+        return Response(res, mimetype='text/plain')
+
+
+    @app.route('/pay/<id>', methods=['POST'])
+    def pay(id):
+        app.logger.info('payment for {}'.format(id))
+        cart = request.get_json()
+        app.logger.info(cart)
+
+        anonymous_user = True
+        trace_id = getattr(request, '_otel_trace_id', os.urandom(16).hex())
+        parent_id = getattr(request, '_otel_span_id', os.urandom(8).hex())
+
+        # check user exists
+        try:
+            u_span_id = os.urandom(8).hex()
+            u_start = time.time_ns()
+            req = requests.get(
+                'http://{user}:8080/check/{id}'.format(user=USER, id=id),
+                headers={'traceparent': f'00-{trace_id}-{u_span_id}-01'}
+            )
+            u_end = time.time_ns()
+            request._otel_child_spans.append({
+                'traceId': trace_id,
+                'spanId': u_span_id,
+                'parentSpanId': parent_id,
+                'name': 'GET http://user:8080/check/:id',
+                'kind': 3,
+                'startTimeUnixNano': str(u_start),
+                'endTimeUnixNano': str(max(u_end, u_start + 1000)),
+                'attributes': [
+                    otel_attr('http.method', 'GET'),
+                    otel_attr('peer.service', 'user'),
+                    otel_attr('http.status_code', int(req.status_code))
+                ],
+                'status': {'code': 2 if req.status_code >= 500 else 1}
+            })
+        except requests.exceptions.RequestException as err:
+            app.logger.error(err)
+            return str(err), 500
+        if req.status_code == 200:
+            anonymous_user = False
+
+        # check that the cart is valid
+        # this will blow up if the cart is not valid
+        has_shipping = False
+        for item in cart.get('items'):
+            if item.get('sku') == 'SHIP':
+                has_shipping = True
+
+        if cart.get('total', 0) == 0 or has_shipping == False:
+            app.logger.warn('cart not valid')
+            return 'cart not valid', 400
+
+        # dummy call to payment gateway, hope they dont object
+        try:
+            gw_span_id = os.urandom(8).hex()
+            gw_start = time.time_ns()
+            req = requests.get(PAYMENT_GATEWAY)
+            gw_end = time.time_ns()
+            request._otel_child_spans.append({
+                'traceId': trace_id,
+                'spanId': gw_span_id,
+                'parentSpanId': parent_id,
+                'name': f'GET {PAYMENT_GATEWAY}',
+                'kind': 3,
+                'startTimeUnixNano': str(gw_start),
+                'endTimeUnixNano': str(max(gw_end, gw_start + 1000)),
+                'attributes': [
+                    otel_attr('http.method', 'GET'),
+                    otel_attr('http.url', PAYMENT_GATEWAY),
+                    otel_attr('http.status_code', int(req.status_code))
+                ],
+                'status': {'code': 2 if req.status_code >= 500 else 1}
+            })
+            app.logger.info('{} returned {}'.format(PAYMENT_GATEWAY, req.status_code))
+        except requests.exceptions.RequestException as err:
+            app.logger.error(err)
+            return str(err), 500
+        if req.status_code != 200:
+            return 'payment error', req.status_code
+
+        # Prometheus
+        # items purchased
+        item_count = countItems(cart.get('items', []))
+        PromMetrics['SOLD_COUNTER'].inc(item_count)
+        PromMetrics['AUS'].observe(item_count)
+        PromMetrics['AVS'].observe(cart.get('total', 0))
+
+        # Generate order id
+        orderid = str(uuid.uuid4())
+        q_span_id = os.urandom(8).hex()
+        q_start = time.time_ns()
+        queueOrder({ 'orderid': orderid, 'user': id, 'cart': cart })
+        q_end = time.time_ns()
+        request._otel_child_spans.append({
+            'traceId': trace_id,
+            'spanId': q_span_id,
+            'parentSpanId': parent_id,
+            'name': 'rabbitmq.publish orders',
+            'kind': 4,
+            'startTimeUnixNano': str(q_start),
+            'endTimeUnixNano': str(max(q_end, q_start + 1000)),
+            'attributes': [
+                otel_attr('messaging.system', 'rabbitmq'),
+                otel_attr('messaging.destination', 'orders'),
+                otel_attr('messaging.operation', 'publish')
+            ],
+            'status': {'code': 1}
+        })
+
+        # add to order history
+        if not anonymous_user:
+            try:
+                req = requests.post('http://{user}:8080/order/{id}'.format(user=USER, id=id),
+                        data=json.dumps({'orderid': orderid, 'cart': cart}),
+                        headers={'Content-Type': 'application/json'})
+                app.logger.info('order history returned {}'.format(req.status_code))
+            except requests.exceptions.RequestException as err:
+                app.logger.error(err)
+                return str(err), 500
+
+        # delete cart
+        try:
+            c_span_id = os.urandom(8).hex()
+            c_start = time.time_ns()
+            req = requests.delete(
+                'http://{cart}:8080/cart/{id}'.format(cart=CART, id=id),
+                headers={'traceparent': f'00-{trace_id}-{c_span_id}-01'}
+            )
+            c_end = time.time_ns()
+            request._otel_child_spans.append({
+                'traceId': trace_id,
+                'spanId': c_span_id,
+                'parentSpanId': parent_id,
+                'name': 'DELETE http://cart:8080/cart/:id',
+                'kind': 3,
+                'startTimeUnixNano': str(c_start),
+                'endTimeUnixNano': str(max(c_end, c_start + 1000)),
+                'attributes': [
+                    otel_attr('http.method', 'DELETE'),
+                    otel_attr('peer.service', 'cart'),
+                    otel_attr('http.status_code', int(req.status_code))
+                ],
+                'status': {'code': 2 if req.status_code >= 500 else 1}
+            })
+            app.logger.info('cart delete returned {}'.format(req.status_code))
+        except requests.exceptions.RequestException as err:
+            app.logger.error(err)
+            return str(err), 500
+        if req.status_code != 200:
+            return 'order history update error', req.status_code
+
+        return jsonify({ 'orderid': orderid })
+
+
+    def queueOrder(order):
+        app.logger.info('queue order')
+
+        # For screenshot demo requirements optionally add in a bit of delay
+        delay = int(os.getenv('PAYMENT_DELAY_MS', 0))
+        time.sleep(delay / 1000)
+
+        headers = {}
+        publisher.publish(order, headers)
+
+
+    def countItems(items):
+        count = 0
+        for item in items:
+            if item.get('sku') != 'SHIP':
+                count += item.get('qty')
+
+        return count
+
+
+    # RabbitMQ
+    publisher = Publisher(app.logger)
+
+    if __name__ == "__main__":
+        sh = logging.StreamHandler(sys.stdout)
+        sh.setLevel(logging.INFO)
+        fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        app.logger.info('Payment gateway {}'.format(PAYMENT_GATEWAY))
+        port = int(os.getenv("SHOP_PAYMENT_PORT", "8080"))
+        app.logger.info('Starting on port {}'.format(port))
+        app.run(host='0.0.0.0', port=port)
+
+  cart-server.js: |
+    const instana = require('@instana/collector');
+    // init tracing
+    // MUST be done before loading anything else!
+    instana({
+        tracing: {
+            enabled: true
+        }
+    });
+
+    const http = require('http');
+    const crypto = require('crypto');
+    const { URL } = require('url');
+    const redis = require('redis');
+    const request = require('request');
+    const bodyParser = require('body-parser');
+    const express = require('express');
+    const pino = require('pino');
+    const expPino = require('express-pino-logger');
+    // Prometheus
+    const promClient = require('prom-client');
+    const Registry = promClient.Registry;
+    const register = new Registry();
+    const counter = new promClient.Counter({
+        name: 'items_added',
+        help: 'running count of items added to cart',
+        registers: [register]
+    });
+    const httpRequestsTotal = new promClient.Counter({
+        name: 'http_requests_total',
+        help: 'Total HTTP requests processed',
+        labelNames: ['method', 'route', 'status'],
+        registers: [register]
+    });
+    const httpRequestDurationSeconds = new promClient.Histogram({
+        name: 'http_request_duration_seconds',
+        help: 'HTTP request latency in seconds',
+        labelNames: ['method', 'route', 'status'],
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0],
+        registers: [register]
+    });
+
+    const OTEL_SERVICE_NAME = process.env.OTEL_SERVICE_NAME || 'cart';
+    const OTEL_ENDPOINT = new URL(
+        process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ||
+        'http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces'
+    );
+
+    function parseTraceparent(headerVal) {
+        if (!headerVal || typeof headerVal !== 'string') return null;
+        const parts = headerVal.trim().split('-');
+        if (parts.length === 4 && parts[1].length === 32 && parts[2].length === 16) {
+            return { traceId: parts[1], parentSpanId: parts[2] };
+        }
+        return null;
+    }
+
+    function otelAttr(key, val) {
+        if (typeof val === 'number') {
+            return { key: key, value: { intValue: String(Math.trunc(val)) } };
+        }
+        return { key: key, value: { stringValue: String(val) } };
+    }
+
+    function exportOtelSpans(spans) {
+        if (!spans || spans.length === 0) return;
+        const payload = JSON.stringify({
+            resourceSpans: [{
+                resource: {
+                    attributes: [
+                        otelAttr('service.name', OTEL_SERVICE_NAME),
+                        otelAttr('service.namespace', 'robot-shop'),
+                        otelAttr('telemetry.sdk.language', 'nodejs')
+                    ]
+                },
+                scopeSpans: [{
+                    scope: {
+                        name: 'robot-shop.opentelemetry.http',
+                        version: '1.0.0'
+                    },
+                    spans: spans
+                }]
+            }]
+        });
+        const reqOpts = {
+            hostname: OTEL_ENDPOINT.hostname,
+            port: OTEL_ENDPOINT.port || 4318,
+            path: OTEL_ENDPOINT.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
+            },
+            timeout: 1500
+        };
+        const r = http.request(reqOpts, (res) => {
+            res.resume();
+        });
+        r.on('error', () => {});
+        r.write(payload);
+        r.end();
+    }
+
+    var redisConnected = false;
+
+    var redisHost = process.env.REDIS_HOST || 'redis'
+    var catalogueHost = process.env.CATALOGUE_HOST || 'catalogue'
+
+    const logger = pino({
+        level: 'info',
+        prettyPrint: false,
+        useLevelLabels: true
+    });
+    const expLogger = expPino({
+        logger: logger
+    });
+
+    const app = express();
+
+    app.use(expLogger);
+
+    app.use((req, res, next) => {
+        res.set('Timing-Allow-Origin', '*');
+        res.set('Access-Control-Allow-Origin', '*');
+        next();
+    });
+
+    app.use((req, res, next) => {
+        let dcs = [
+            "asia-northeast2",
+            "asia-south1",
+            "europe-west3",
+            "us-east1",
+            "us-west1"
+        ];
+        let span = instana.currentSpan();
+        span.annotate('custom.sdk.tags.datacenter', dcs[Math.floor(Math.random() * dcs.length)]);
+
+        next();
+    });
+
+    app.use(bodyParser.urlencoded({ extended: true }));
+    app.use(bodyParser.json());
+
+    function normalizeCartRoute(req) {
+        if (req.route && req.route.path) {
+            return req.route.path;
+        }
+        const p = req.path || '/';
+        if (p === '/health') return '/health';
+        if (p.startsWith('/cart/')) return '/cart/:id';
+        if (p.startsWith('/rename/')) return '/rename/:from/:to';
+        if (p.startsWith('/add/')) return '/add/:id/:sku/:qty';
+        if (p.startsWith('/update/')) return '/update/:id/:sku/:qty';
+        if (p.startsWith('/shipping/')) return '/shipping/:id';
+        return 'unmatched';
+    }
+
+    app.use((req, res, next) => {
+        if (req.path === '/metrics') {
+            return next();
+        }
+        const startHrTime = process.hrtime();
+        const startWallNs = BigInt(Date.now()) * 1000000n;
+        const parsedTp = parseTraceparent(req.headers['traceparent']);
+        const traceId = parsedTp ? parsedTp.traceId : crypto.randomBytes(16).toString('hex');
+        const parentSpanId = parsedTp ? parsedTp.parentSpanId : '';
+        const spanId = crypto.randomBytes(8).toString('hex');
+        req._otel = {
+            traceId: traceId,
+            spanId: spanId,
+            parentSpanId: parentSpanId,
+            childSpans: []
+        };
+
+        res.on('finish', () => {
+            const diff = process.hrtime(startHrTime);
+            const durationSeconds = diff[0] + diff[1] / 1e9;
+            const durationNs = BigInt(diff[0]) * 1000000000n + BigInt(diff[1]);
+            const endWallNs = startWallNs + (durationNs > 0n ? durationNs : 1000n);
+            const route = normalizeCartRoute(req);
+            const status = String(res.statusCode);
+            httpRequestsTotal.inc({ method: req.method, route: route, status: status });
+            httpRequestDurationSeconds.observe({ method: req.method, route: route, status: status }, durationSeconds);
+
+            if (req.path !== '/health') {
+                const rootSpan = {
+                    traceId: traceId,
+                    spanId: spanId,
+                    name: `${req.method} ${route}`,
+                    kind: 2,
+                    startTimeUnixNano: startWallNs.toString(),
+                    endTimeUnixNano: endWallNs.toString(),
+                    attributes: [
+                        otelAttr('http.method', req.method),
+                        otelAttr('http.route', route),
+                        otelAttr('http.status_code', res.statusCode)
+                    ],
+                    status: {
+                        code: res.statusCode >= 500 ? 2 : 1
+                    }
+                };
+                if (parentSpanId) {
+                    rootSpan.parentSpanId = parentSpanId;
+                }
+                exportOtelSpans([rootSpan].concat(req._otel.childSpans));
+            }
+        });
+        next();
+    });
+
+    app.get('/health', (req, res) => {
+        var stat = {
+            app: 'OK',
+            redis: redisConnected
+        };
+        res.json(stat);
+    });
+
+    // Prometheus
+    app.get('/metrics', (req, res) => {
+        res.header('Content-Type', 'text/plain');
+        res.send(register.metrics());
+    });
+
+
+    // get cart with id
+    app.get('/cart/:id', (req, res) => {
+        redisClient.get(req.params.id, (err, data) => {
+            if(err) {
+                req.log.error('ERROR', err);
+                res.status(500).send(err);
+            } else {
+                if(data == null) {
+                    res.status(404).send('cart not found');
+                } else {
+                    res.set('Content-Type', 'application/json');
+                    res.send(data);
+                }
+            }
+        });
+    });
+
+    // delete cart with id
+    app.delete('/cart/:id', (req, res) => {
+        redisClient.del(req.params.id, (err, data) => {
+            if(err) {
+                req.log.error('ERROR', err);
+                res.status(500).send(err);
+            } else {
+                if(data == 1) {
+                    res.send('OK');
+                } else {
+                    res.status(404).send('cart not found');
+                }
+            }
+        });
+    });
+
+    // rename cart i.e. at login
+    app.get('/rename/:from/:to', (req, res) => {
+        redisClient.get(req.params.from, (err, data) => {
+            if(err) {
+                req.log.error('ERROR', err);
+                res.status(500).send(err);
+            } else {
+                if(data == null) {
+                    res.status(404).send('cart not found');
+                } else {
+                    var cart = JSON.parse(data);
+                    saveCart(req.params.to, cart).then((data) => {
+                        res.json(cart);
+                    }).catch((err) => {
+                        req.log.error(err);
+                        res.status(500).send(err);
+                    });
+                }
+            }
+        });
+    });
+
+    // update/create cart
+    app.get('/add/:id/:sku/:qty', (req, res) => {
+        // check quantity
+        var qty = parseInt(req.params.qty);
+        if(isNaN(qty)) {
+            req.log.warn('quantity not a number');
+            res.status(400).send('quantity must be a number');
+            return;
+        } else if(qty < 1) {
+            req.log.warn('quantity less than one');
+            res.status(400).send('quantity has to be greater than zero');
+            return;
+        }
+
+        // look up product details
+        getProduct(req.params.sku, req._otel).then((product) => {
+            req.log.info('got product', product);
+            if(!product) {
+                res.status(404).send('product not found');
+                return;
+            }
+            // is the product in stock?
+            if(product.instock == 0) {
+                res.status(404).send('out of stock');
+                return;
+            }
+            // does the cart already exist?
+            redisClient.get(req.params.id, (err, data) => {
+                if(err) {
+                    req.log.error('ERROR', err);
+                    res.status(500).send(err);
+                } else {
+                    var cart;
+                    if(data == null) {
+                        // create new cart
+                        cart = {
+                            total: 0,
+                            tax: 0,
+                            items: []
+                        };
+                    } else {
+                        cart = JSON.parse(data);
+                    }
+                    req.log.info('got cart', cart);
+                    // add sku to cart
+                    var item = {
+                        qty: qty,
+                        sku: req.params.sku,
+                        name: product.name,
+                        price: product.price,
+                        subtotal: qty * product.price
+                    };
+                    var list = mergeList(cart.items, item, qty);
+                    cart.items = list;
+                    cart.total = calcTotal(cart.items);
+                    // work out tax
+                    cart.tax = calcTax(cart.total);
+
+                    // save the new cart
+                    saveCart(req.params.id, cart).then((data) => {
+                        counter.inc(qty);
+                        res.json(cart);
+                    }).catch((err) => {
+                        req.log.error(err);
+                        res.status(500).send(err);
+                    });
+                }
+            });
+        }).catch((err) => {
+            req.log.error(err);
+            res.status(500).send(err);
+        });
+    });
+
+    // update quantity - remove item when qty == 0
+    app.get('/update/:id/:sku/:qty', (req, res) => {
+        // check quantity
+        var qty = parseInt(req.params.qty);
+        if(isNaN(qty)) {
+            req.log.warn('quanity not a number');
+            res.status(400).send('quantity must be a number');
+            return;
+        } else if(qty < 0) {
+            req.log.warn('quantity less than zero');
+            res.status(400).send('negative quantity not allowed');
+            return;
+        }
+
+        // get the cart
+        redisClient.get(req.params.id, (err, data) => {
+            if(err) {
+                req.log.error('ERROR', err);
+                res.status(500).send(err);
+            } else {
+                if(data == null) {
+                    res.status(404).send('cart not found');
+                } else {
+                    var cart = JSON.parse(data);
+                    var idx;
+                    var len = cart.items.length;
+                    for(idx = 0; idx < len; idx++) {
+                        if(cart.items[idx].sku == req.params.sku) {
+                            break;
+                        }
+                    }
+                    if(idx == len) {
+                        // not in list
+                        res.status(404).send('not in cart');
+                    } else {
+                        if(qty == 0) {
+                            cart.items.splice(idx, 1);
+                        } else {
+                            cart.items[idx].qty = qty;
+                            cart.items[idx].subtotal = cart.items[idx].price * qty;
+                        }
+                        cart.total = calcTotal(cart.items);
+                        // work out tax
+                        cart.tax = calcTax(cart.total);
+                        saveCart(req.params.id, cart).then((data) => {
+                            res.json(cart);
+                        }).catch((err) => {
+                            req.log.error(err);
+                            res.status(500).send(err);
+                        });
+                    }
+                }
+            }
+        });
+    });
+
+    // add shipping
+    app.post('/shipping/:id', (req, res) => {
+        var shipping = req.body;
+        if(shipping.distance === undefined || shipping.cost === undefined || shipping.location == undefined) {
+            req.log.warn('shipping data missing', shipping);
+            res.status(400).send('shipping data missing');
+        } else {
+            // get the cart
+            redisClient.get(req.params.id, (err, data) => {
+                if(err) {
+                    req.log.error('ERROR', err);
+                    res.status(500).send(err);
+                } else {
+                    if(data == null) {
+                        req.log.info('no cart for', req.params.id);
+                        res.status(404).send('cart not found');
+                    } else {
+                        var cart = JSON.parse(data);
+                        var item = {
+                            qty: 1,
+                            sku: 'SHIP',
+                            name: 'shipping to ' + shipping.location,
+                            price: shipping.cost,
+                            subtotal: shipping.cost
+                        };
+                        // check shipping already in the cart
+                        var idx;
+                        var len = cart.items.length;
+                        for(idx = 0; idx < len; idx++) {
+                            if(cart.items[idx].sku == item.sku) {
+                                break;
+                            }
+                        }
+                        if(idx == len) {
+                            // not already in cart
+                            cart.items.push(item);
+                        } else {
+                            cart.items[idx] = item;
+                        }
+                        cart.total = calcTotal(cart.items);
+                        // work out tax
+                        cart.tax = calcTax(cart.total);
+
+                        // save the updated cart
+                        saveCart(req.params.id, cart).then((data) => {
+                            res.json(cart);
+                        }).catch((err) => {
+                            req.log.error(err);
+                            res.status(500).send(err);
+                        });
+                    }
+                }
+            }
+            );
+        }
+    });
+
+    function mergeList(list, product, qty) {
+        var inlist = false;
+        // loop through looking for sku
+        var idx;
+        var len = list.length;
+        for(idx = 0; idx < len; idx++) {
+            if(list[idx].sku == product.sku) {
+                inlist = true;
+                break;
+            }
+        }
+
+        if(inlist) {
+            list[idx].qty += qty;
+            list[idx].subtotal = list[idx].price * list[idx].qty;
+        } else {
+            list.push(product);
+        }
+
+        return list;
+    }
+
+    function calcTotal(list) {
+        var total = 0;
+        for(var idx = 0, len = list.length; idx < len; idx++) {
+            total += list[idx].subtotal;
+        }
+
+        return total;
+    }
+
+    function calcTax(total) {
+        // tax @ 20%
+        return (total - (total / 1.2));
+    }
+
+    function getProduct(sku, otelCtx) {
+        return new Promise((resolve, reject) => {
+            const clientSpanId = crypto.randomBytes(8).toString('hex');
+            const startWallNs = BigInt(Date.now()) * 1000000n;
+            const startHr = process.hrtime();
+            const headers = {};
+            if (otelCtx && otelCtx.traceId) {
+                headers['traceparent'] = `00-${otelCtx.traceId}-${clientSpanId}-01`;
+            }
+            request({
+                url: 'http://' + catalogueHost + ':8080/product/' + sku,
+                headers: headers
+            }, (err, res, body) => {
+                if (otelCtx && otelCtx.childSpans) {
+                    const diff = process.hrtime(startHr);
+                    const durNs = BigInt(diff[0]) * 1000000000n + BigInt(diff[1]);
+                    const statusCode = res ? res.statusCode : 500;
+                    otelCtx.childSpans.push({
+                        traceId: otelCtx.traceId,
+                        spanId: clientSpanId,
+                        parentSpanId: otelCtx.spanId,
+                        name: 'GET http://catalogue:8080/product/:sku',
+                        kind: 3,
+                        startTimeUnixNano: startWallNs.toString(),
+                        endTimeUnixNano: (startWallNs + (durNs > 0n ? durNs : 1000n)).toString(),
+                        attributes: [
+                            otelAttr('http.method', 'GET'),
+                            otelAttr('peer.service', 'catalogue'),
+                            otelAttr('http.status_code', statusCode)
+                        ],
+                        status: {
+                            code: (err || statusCode >= 500) ? 2 : 1
+                        }
+                    });
+                }
+                if(err) {
+                    reject(err);
+                } else if(res.statusCode != 200) {
+                    resolve(null);
+                } else {
+                    // return object - body is a string
+                    // TODO - catch parse error
+                    resolve(JSON.parse(body));
+                }
+            });
+        });
+    }
+
+    function saveCart(id, cart) {
+        logger.info('saving cart', cart);
+        return new Promise((resolve, reject) => {
+            redisClient.setex(id, 3600, JSON.stringify(cart), (err, data) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(data);
+                }
+            });
+        });
+    }
+
+    // connect to Redis
+    var redisClient = redis.createClient({
+        host: redisHost
+    });
+
+    redisClient.on('error', (e) => {
+        logger.error('Redis ERROR', e);
+    });
+    redisClient.on('ready', (r) => {
+        logger.info('Redis READY', r);
+        redisConnected = true;
+    });
+
+    // fire it up!
+    const port = process.env.CART_SERVER_PORT || '8080';
+    app.listen(port, () => {
+        logger.info('Started on port', port);
+    });
+
+  catalogue-server.js: |
+    const instana = require('@instana/collector');
+    // init tracing
+    // MUST be done before loading anything else!
+    instana({
+        tracing: {
+            enabled: true
+        }
+    });
+
+    const http = require('http');
+    const crypto = require('crypto');
+    const { URL } = require('url');
+    const mongoClient = require('mongodb').MongoClient;
+    const mongoObjectID = require('mongodb').ObjectID;
+    const bodyParser = require('body-parser');
+    const express = require('express');
+    const pino = require('pino');
+    const expPino = require('express-pino-logger');
+
+    const logger = pino({
+        level: 'info',
+        prettyPrint: false,
+        useLevelLabels: true
+    });
+    const expLogger = expPino({
+        logger: logger
+    });
+
+    // MongoDB
+    var db;
+    var collection;
+    var mongoConnected = false;
+
+    const OTEL_SERVICE_NAME = process.env.OTEL_SERVICE_NAME || 'catalogue';
+    const OTEL_ENDPOINT = new URL(
+        process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ||
+        'http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces'
+    );
+
+    function parseTraceparent(headerVal) {
+        if (!headerVal || typeof headerVal !== 'string') return null;
+        const parts = headerVal.trim().split('-');
+        if (parts.length === 4 && parts[1].length === 32 && parts[2].length === 16) {
+            return { traceId: parts[1], parentSpanId: parts[2] };
+        }
+        return null;
+    }
+
+    function otelAttr(key, val) {
+        if (typeof val === 'number') {
+            return { key: key, value: { intValue: String(Math.trunc(val)) } };
+        }
+        return { key: key, value: { stringValue: String(val) } };
+    }
+
+    function exportOtelSpans(spans) {
+        if (!spans || spans.length === 0) return;
+        const payload = JSON.stringify({
+            resourceSpans: [{
+                resource: {
+                    attributes: [
+                        otelAttr('service.name', OTEL_SERVICE_NAME),
+                        otelAttr('service.namespace', 'robot-shop'),
+                        otelAttr('telemetry.sdk.language', 'nodejs')
+                    ]
+                },
+                scopeSpans: [{
+                    scope: {
+                        name: 'robot-shop.opentelemetry.http',
+                        version: '1.0.0'
+                    },
+                    spans: spans
+                }]
+            }]
+        });
+        const reqOpts = {
+            hostname: OTEL_ENDPOINT.hostname,
+            port: OTEL_ENDPOINT.port || 4318,
+            path: OTEL_ENDPOINT.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
+            },
+            timeout: 1500
+        };
+        const r = http.request(reqOpts, (res) => {
+            res.resume();
+        });
+        r.on('error', () => {});
+        r.write(payload);
+        r.end();
+    }
+
+    // Lightweight, dependency-free Prometheus exposition registry for Golden Signals
+    const HISTOGRAM_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0];
+    const metricsStore = new Map();
+
+    function normalizeCatalogueRoute(req) {
+        if (req.route && req.route.path) {
+            return req.route.path;
+        }
+        const p = req.path || '/';
+        if (p === '/health') return '/health';
+        if (p === '/products') return '/products';
+        if (p === '/categories') return '/categories';
+        if (p.startsWith('/product/')) return '/product/:sku';
+        if (p.startsWith('/products/')) return '/products/:cat';
+        if (p.startsWith('/search/')) return '/search/:text';
+        return 'unmatched';
+    }
+
+    function recordCatalogueMetric(method, route, status, durationSeconds) {
+        const key = `${method}|${route}|${status}`;
+        let entry = metricsStore.get(key);
+        if (!entry) {
+            entry = {
+                method: method,
+                route: route,
+                status: status,
+                count: 0,
+                sum: 0.0,
+                buckets: new Array(HISTOGRAM_BUCKETS.length).fill(0)
+            };
+            metricsStore.set(key, entry);
+        }
+        entry.count += 1;
+        entry.sum += durationSeconds;
+        for (let i = 0; i < HISTOGRAM_BUCKETS.length; i++) {
+            if (durationSeconds <= HISTOGRAM_BUCKETS[i]) {
+                entry.buckets[i] += 1;
+            }
+        }
+    }
+
+    function renderCatalogueMetrics() {
+        const lines = [];
+        lines.push('# HELP http_requests_total Total HTTP requests processed');
+        lines.push('# TYPE http_requests_total counter');
+        for (const entry of metricsStore.values()) {
+            const labels = `method="${entry.method}",route="${entry.route}",status="${entry.status}"`;
+            lines.push(`http_requests_total{${labels}} ${entry.count}`);
+        }
+        lines.push('# HELP http_request_duration_seconds HTTP request latency in seconds');
+        lines.push('# TYPE http_request_duration_seconds histogram');
+        for (const entry of metricsStore.values()) {
+            const baseLabels = `method="${entry.method}",route="${entry.route}",status="${entry.status}"`;
+            for (let i = 0; i < HISTOGRAM_BUCKETS.length; i++) {
+                lines.push(`http_request_duration_seconds_bucket{${baseLabels},le="${HISTOGRAM_BUCKETS[i]}"} ${entry.buckets[i]}`);
+            }
+            lines.push(`http_request_duration_seconds_bucket{${baseLabels},le="+Inf"} ${entry.count}`);
+            lines.push(`http_request_duration_seconds_sum{${baseLabels}} ${entry.sum}`);
+            lines.push(`http_request_duration_seconds_count{${baseLabels}} ${entry.count}`);
+        }
+        return lines.join('\n') + '\n';
+    }
+
+    const app = express();
+
+    app.use(expLogger);
+
+    app.use((req, res, next) => {
+        res.set('Timing-Allow-Origin', '*');
+        res.set('Access-Control-Allow-Origin', '*');
+        next();
+    });
+
+    app.use((req, res, next) => {
+        let dcs = [
+            "asia-northeast2",
+            "asia-south1",
+            "europe-west3",
+            "us-east1",
+            "us-west1"
+        ];
+        let span = instana.currentSpan();
+        span.annotate('custom.sdk.tags.datacenter', dcs[Math.floor(Math.random() * dcs.length)]);
+
+        next();
+    });
+
+    app.use(bodyParser.urlencoded({ extended: true }));
+    app.use(bodyParser.json());
+
+    app.use((req, res, next) => {
+        if (req.path === '/metrics') {
+            return next();
+        }
+        const startHrTime = process.hrtime();
+        const startWallNs = BigInt(Date.now()) * 1000000n;
+        const parsedTp = parseTraceparent(req.headers['traceparent']);
+        const traceId = parsedTp ? parsedTp.traceId : crypto.randomBytes(16).toString('hex');
+        const parentSpanId = parsedTp ? parsedTp.parentSpanId : '';
+        const spanId = crypto.randomBytes(8).toString('hex');
+
+        res.on('finish', () => {
+            const diff = process.hrtime(startHrTime);
+            const durationSeconds = diff[0] + diff[1] / 1e9;
+            const durationNs = BigInt(diff[0]) * 1000000000n + BigInt(diff[1]);
+            const endWallNs = startWallNs + (durationNs > 0n ? durationNs : 1000n);
+            const route = normalizeCatalogueRoute(req);
+            const status = String(res.statusCode);
+            recordCatalogueMetric(req.method, route, status, durationSeconds);
+
+            if (req.path !== '/health') {
+                const rootSpan = {
+                    traceId: traceId,
+                    spanId: spanId,
+                    name: `${req.method} ${route}`,
+                    kind: 2,
+                    startTimeUnixNano: startWallNs.toString(),
+                    endTimeUnixNano: endWallNs.toString(),
+                    attributes: [
+                        otelAttr('http.method', req.method),
+                        otelAttr('http.route', route),
+                        otelAttr('http.status_code', res.statusCode),
+                        otelAttr('db.system', 'mongodb')
+                    ],
+                    status: {
+                        code: res.statusCode >= 500 ? 2 : 1
+                    }
+                };
+                if (parentSpanId) {
+                    rootSpan.parentSpanId = parentSpanId;
+                }
+                exportOtelSpans([rootSpan]);
+            }
+        });
+        next();
+    });
+
+    app.get('/health', (req, res) => {
+        var stat = {
+            app: 'OK',
+            mongo: mongoConnected
+        };
+        res.json(stat);
+    });
+
+    app.get('/metrics', (req, res) => {
+        res.set('Content-Type', 'text/plain; version=0.0.4');
+        res.send(renderCatalogueMetrics());
+    });
+
+    // all products
+    app.get('/products', (req, res) => {
+        if(mongoConnected) {
+            collection.find({}).toArray().then((products) => {
+                res.json(products);
+            }).catch((e) => {
+                req.log.error('ERROR', e);
+                res.status(500).send(e);
+            });
+        } else {
+            req.log.error('database not available');
+            res.status(500).send('database not avaiable');
+        }
+    });
+
+    // product by SKU
+    app.get('/product/:sku', (req, res) => {
+        if(mongoConnected) {
+            // optionally slow this down
+            const delay = process.env.GO_SLOW || 0;
+            setTimeout(() => {
+            collection.findOne({sku: req.params.sku}).then((product) => {
+                req.log.info('product', product);
+                if(product) {
+                    res.json(product);
+                } else {
+                    res.status(404).send('SKU not found');
+                }
+            }).catch((e) => {
+                req.log.error('ERROR', e);
+                res.status(500).send(e);
+            });
+            }, delay);
+        } else {
+            req.log.error('database not available');
+            res.status(500).send('database not available');
+        }
+    });
+
+    // products in a category
+    app.get('/products/:cat', (req, res) => {
+        if(mongoConnected) {
+            collection.find({ categories: req.params.cat }).sort({ name: 1 }).toArray().then((products) => {
+                if(products) {
+                    res.json(products);
+                } else {
+                    res.status(404).send('No products for ' + req.params.cat);
+                }
+            }).catch((e) => {
+                req.log.error('ERROR', e);
+                res.status(500).send(e);
+            });
+        } else {
+            req.log.error('database not available');
+            res.status(500).send('database not avaiable');
+        }
+    });
+
+    // all categories
+    app.get('/categories', (req, res) => {
+        if(mongoConnected) {
+            collection.distinct('categories').then((categories) => {
+                res.json(categories);
+            }).catch((e) => {
+                req.log.error('ERROR', e);
+                res.status(500).send(e);
+            });
+        } else {
+            req.log.error('database not available');
+            res.status(500).send('database not available');
+        }
+    });
+
+    // search name and description
+    app.get('/search/:text', (req, res) => {
+        if(mongoConnected) {
+            collection.find({ '$text': { '$search': req.params.text }}).toArray().then((hits) => {
+                res.json(hits);
+            }).catch((e) => {
+                req.log.error('ERROR', e);
+                res.status(500).send(e);
+            });
+        } else {
+            req.log.error('database not available');
+            res.status(500).send('database not available');
+        }
+    });
+
+    // set up Mongo
+    function mongoConnect() {
+        return new Promise((resolve, reject) => {
+            var mongoURL = process.env.MONGO_URL || 'mongodb://mongodb:27017/catalogue';
+            mongoClient.connect(mongoURL, (error, client) => {
+                if(error) {
+                    reject(error);
+                } else {
+                    db = client.db('catalogue');
+                    collection = db.collection('products');
+                    resolve('connected');
+                }
+            });
+        });
+    }
+
+    // mongodb connection retry loop
+    function mongoLoop() {
+        mongoConnect().then((r) => {
+            mongoConnected = true;
+            logger.info('MongoDB connected');
+        }).catch((e) => {
+            logger.error('ERROR', e);
+            setTimeout(mongoLoop, 2000);
+        });
+    }
+
+    mongoLoop();
+
+    // fire it up!
+    const port = process.env.CATALOGUE_SERVER_PORT || '8080';
+    app.listen(port, () => {
+        logger.info('Started on port', port);
+    });

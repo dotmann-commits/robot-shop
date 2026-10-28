@@ -24,18 +24,22 @@ spec:
       - name: payment
         image: {{ .Values.image.repo }}/rs-payment:{{ .Values.image.version }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        # agent networking access
         env:
-          - name: INSTANA_AGENT_HOST
-            valueFrom:
-              fieldRef:
-                fieldPath: status.hostIP
-          {{- if .Values.payment.gateway }}
+          - name: OTEL_SERVICE_NAME
+            value: "payment"
+          - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+            value: "http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces"
+        {{- if .Values.payment.gateway }}
           - name: PAYMENT_GATEWAY
             value: {{ .Values.payment.gateway }}
-          {{- end }}
+        {{- end }}
         ports:
         - containerPort: 8080
+        volumeMounts:
+        - name: metrics-instrumentation
+          mountPath: /app/payment.py
+          subPath: payment.py
+          readOnly: true
         resources:
           limits:
             cpu: 200m
@@ -43,6 +47,10 @@ spec:
           requests:
             cpu: 100m
             memory: 50Mi
+      volumes:
+      - name: metrics-instrumentation
+        configMap:
+          name: robot-shop-metrics-instrumentation
       restartPolicy: Always
       {{- with .Values.payment.affinity }}
       affinity:
