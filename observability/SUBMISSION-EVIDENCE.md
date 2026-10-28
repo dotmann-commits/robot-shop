@@ -10,7 +10,7 @@
 | Logging config | `observability/logging/` (Fluent Bit, Loki, Grafana Loki datasource) | Present; fluent-bit and loki pods Running |
 | Tracing config | `observability/tracing/jaeger.yaml`, `otel-collector.yaml` | Present; pods Running. **`grafana-jaeger-datasource.yaml` named in the handover is missing** |
 | SLO document with error budget | `observability/slo/robot-shop-availability-slo.md`, `observability/slo/error-budget-policy.md` | Written |
-| Blameless postmortem | `observability/incident-drill/POSTMORTEM.md` | Written from drill evidence (2026-10-28 19:52–20:06 UTC) |
+| Blameless postmortem | `observability/incident-drill/POSTMORTEM.md` | Written from evidence of both drill runs (2026-10-28 19:52–20:06 and 20:39–20:52 UTC) |
 
 ## Done Means (brief, slide 8)
 
@@ -18,9 +18,9 @@
 |---|---|---|
 | The alert fires during the drill | `observability/incident-drill/evidence/02-inject-detect.log` | **Verified:** pending 19:57:21, firing 19:59:21, received by Alertmanager, resolved by 20:04:57 UTC |
 | Alert delivered to Slack | `evidence/run2-slack/03-mitigate-recover.log`, `05-alertmanager-slack-delivery.txt` + channel screenshot | **Verified (run 2):** Alertmanager Slack notifications 0 → 1 (firing, ~20:46) → 2 (resolved, ~20:52), 0 failures. Run 1 had no Slack set up |
-| One request is traced | Jaeger: checkout (payment → cart), add to cart (cart → catalogue) | Reported earlier; screenshots needed |
-| Logs searchable by service and level | Grafana Explore, Loki: `{namespace="robot-shop", service="catalogue"} \|= "error"` | Reported earlier; screenshot needed |
-| Runbook linked from the alert | `runbook_url` annotation in `observability/alerting/robot-shop-slo-rules.yaml` → `observability/runbooks/robot-shop-availability-slo.md` | Linked; URL resolves only after the files are pushed to the fork |
+| One request is traced | `screenshots/09-jaeger-trace-payment-cart.png`, `10-jaeger-trace-cart-catalogue.png`; `evidence/final-validation.txt` | **Verified:** payment → cart (6 spans) and cart → catalogue (3 spans); fresh traces again at 23:07 UTC |
+| Logs searchable by service and level | Loki labels `service` and `level`; `evidence/final-validation.txt` | **Verified by API** (23:07 UTC: `{namespace="robot-shop", service="catalogue", level="error"}` returned 105 lines in 10 min). Grafana Explore screenshots 07/08 are added by hand |
+| Runbook linked from the alert | `runbook_url` annotation in `observability/alerting/robot-shop-slo-rules.yaml` → `observability/runbooks/robot-shop-availability-slo.md` | **Verified:** the link is in the Slack message template, and the GitHub URL returns HTTP 200 |
 
 ## Instana removal (brief, slide 6)
 
@@ -37,24 +37,16 @@
 
 - `observability/final-validation.sh` writes `observability/incident-drill/evidence/final-validation.txt` (run 2026-10-28 21:52 UTC).
 - That run found Grafana unready (2/3, 18 restarts) because of its 200m CPU / 256Mi limits. Fixed by raising them to 1000m / 512Mi in `kube-prometheus-stack-values.yaml` (kube-prometheus-stack revision 4, 21:53 UTC). The new pod was 3/3 Ready with 0 restarts.
+- **Re-run 2026-10-28 23:07 UTC** (the file now holds this run):
+  - Helm: robot-shop revision 12, kube-prometheus-stack revision 4 and my-vote-release revision 4, all `deployed`. No pod outside Running; Grafana 3/3, 0 restarts.
+  - Prometheus: cart, catalogue, payment and web targets UP; both SLO rule groups ok.
+  - SLI: error ratio 0, alert inactive, 24h budget remaining 0.77.
+  - Slack notifications: 2. Jaeger: fresh multi-service traces. Capstone 1 unchanged.
 
-## Screenshots to capture
+## Screenshots
 
-Save them in `observability/screenshots/` with the file names listed in its [README](screenshots/README.md).
+Status of every shot (captured or still needed) and how each was taken: [screenshots/README.md](screenshots/README.md).
 
-1. `kubectl -n robot-shop get pods` (all Running) and `helm list -A`.
-2. Grafana Golden Signals dashboard, healthy, and during the drill window (19:52–20:15 UTC on 2026-10-28).
-3. Prometheus **Alerts** page with `RobotShopAvailabilitySLOBurn` FIRING, and the **Rules** page showing the SLO group as healthy.
-4. Prometheus graph of `robotshop:availability_error_ratio:rate5m` covering the drill.
-5. Alertmanager UI with the alert received.
-6. Loki query showing catalogue errors during the drill.
-7. Jaeger traces (checkout, add to cart).
-8. Slack channel: the **[FIRING]** (about 20:46 UTC) and **[RESOLVED]** (about 20:52 UTC) `RobotShopAvailabilitySLOBurn` messages from run 2.
+## Delivery
 
-## Files created or changed in this step (uncommitted)
-
-- `observability/alerting/robot-shop-slo-rules.yaml`: applied to the cluster.
-- `observability/alerting/alertmanager-slack-config.yaml`: applied 2026-10-28 20:38:34 UTC. The webhook lives only in the cluster Secret `robot-shop/alertmanager-slack-webhook`, never in Git.
-- `observability/runbooks/robot-shop-availability-slo.md`
-- `observability/slo/robot-shop-availability-slo.md`, `observability/slo/error-budget-policy.md`
-- `observability/incident-drill/` (drill scripts, evidence logs, postmortem)
+All configuration, scripts, evidence and documents are committed and pushed to `https://github.com/dotmann-commits/robot-shop` (`master`). The Slack webhook lives only in the cluster Secret `robot-shop/alertmanager-slack-webhook`, never in Git.
