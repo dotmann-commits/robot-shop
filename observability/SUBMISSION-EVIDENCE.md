@@ -22,6 +22,12 @@
 | Logs searchable by service and level | Grafana Explore, Loki: `{namespace="robot-shop", service="catalogue"} \|= "error"` | Reported earlier; screenshot needed |
 | Runbook linked from the alert | `runbook_url` annotation in `observability/alerting/robot-shop-slo-rules.yaml` → `observability/runbooks/robot-shop-availability-slo.md` | Linked; URL resolves only after the files are pushed to the fork |
 
+## Instana removal (brief, slide 6)
+
+- Helm templates: all `INSTANA_AGENT_HOST` env vars and the EUM settings removed (commit `d8160cf`).
+- Project ConfigMap `robot-shop-metrics-instrumentation`: the upstream Instana code is removed from cart and catalogue (`@instana/collector` start-up and the `instana.currentSpan()` middleware) and from payment (`import instana`). Deployed as Helm revision 12 on 2026-10-28 at 21:45 UTC. Before the change, most catalogue and cart log lines were Instana "Agent cannot be contacted" warnings. Afterwards there were 0 Instana log lines, Prometheus targets were up, the SLI error ratio was 0, and Jaeger received OpenTelemetry traces for cart→catalogue and payment→cart.
+- **Known leftover:** the upstream `robotshop/rs-web` image builds an Instana nginx OpenTracing sensor into its own `nginx.conf` (via its entrypoint), which is why `x-instana-*` headers appear on proxied requests. No Instana agent is configured. Removing it would mean overriding the gateway's nginx configuration, and it was left as is for the deadline.
+
 ## Post-drill recovery verification
 
 - `observability/incident-drill/evidence/run2-slack/06-recovery-check.txt`: 1m vs 5m error ratios around the alert resolving, current health, and dependency checks (Redis `PONG`, MongoDB `ping`).

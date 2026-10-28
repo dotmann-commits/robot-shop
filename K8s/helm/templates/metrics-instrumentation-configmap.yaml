@@ -4,6 +4,8 @@
 # for payment (Flask), cart (Express + prom-client), and catalogue (Express).
 # Preserves all original business metrics, propagates W3C traceparent headers across services,
 # and avoids sensitive data or high-cardinality labels.
+# Instana instrumentation from the upstream sources (@instana/collector start-up, Instana span
+# annotation middleware, Python `import instana`) is removed; tracing is OpenTelemetry only.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -14,7 +16,6 @@ data:
   payment.py: |
     import random
 
-    import instana
     import os
     import sys
     import time
@@ -380,15 +381,6 @@ data:
         app.run(host='0.0.0.0', port=port)
 
   cart-server.js: |
-    const instana = require('@instana/collector');
-    // init tracing
-    // MUST be done before loading anything else!
-    instana({
-        tracing: {
-            enabled: true
-        }
-    });
-
     const http = require('http');
     const crypto = require('crypto');
     const { URL } = require('url');
@@ -503,20 +495,6 @@ data:
     app.use((req, res, next) => {
         res.set('Timing-Allow-Origin', '*');
         res.set('Access-Control-Allow-Origin', '*');
-        next();
-    });
-
-    app.use((req, res, next) => {
-        let dcs = [
-            "asia-northeast2",
-            "asia-south1",
-            "europe-west3",
-            "us-east1",
-            "us-west1"
-        ];
-        let span = instana.currentSpan();
-        span.annotate('custom.sdk.tags.datacenter', dcs[Math.floor(Math.random() * dcs.length)]);
-
         next();
     });
 
@@ -964,15 +942,6 @@ data:
     });
 
   catalogue-server.js: |
-    const instana = require('@instana/collector');
-    // init tracing
-    // MUST be done before loading anything else!
-    instana({
-        tracing: {
-            enabled: true
-        }
-    });
-
     const http = require('http');
     const crypto = require('crypto');
     const { URL } = require('url');
@@ -1128,20 +1097,6 @@ data:
     app.use((req, res, next) => {
         res.set('Timing-Allow-Origin', '*');
         res.set('Access-Control-Allow-Origin', '*');
-        next();
-    });
-
-    app.use((req, res, next) => {
-        let dcs = [
-            "asia-northeast2",
-            "asia-south1",
-            "europe-west3",
-            "us-east1",
-            "us-west1"
-        ];
-        let span = instana.currentSpan();
-        span.annotate('custom.sdk.tags.datacenter', dcs[Math.floor(Math.random() * dcs.length)]);
-
         next();
     });
 
