@@ -16,8 +16,8 @@
 | `08-loki-no-instana.png` | Explore → Loki, last 1h: `sum by (service) (count_over_time({namespace="robot-shop", service=~"cart\|catalogue"} \|= "Agent cannot be contacted" [5m]))` dropping to 0 after 21:45 | ⬜ author |
 | `09-jaeger-trace-payment-cart.png` | Trace `659e8bf`: payment `POST /pay/:id` → user, paypal, RabbitMQ publish, payment `DELETE` → cart (2 services, 6 spans) | ✅ captured |
 | `10-jaeger-trace-cart-catalogue.png` | Trace `bd474a3`: cart `GET /add/:id/:sku/:qty` → catalogue `GET /product/:sku` (2 services, 3 spans) | ✅ captured |
-| `11-slack-firing.png` | Slack **[FIRING]** RobotShopAvailabilitySLOBurn (about 20:46) | ⬜ author: Slack |
-| `12-slack-resolved.png` | Slack **[RESOLVED]** (about 20:52) | ⬜ author: Slack |
+| `11-slack-firing.jpg` | Slack #tickets, "Robot Shop DevOps Alerts" app, 20:45: **[FIRING]** RobotShopAvailabilitySLOBurn (critical), 100%, runbook link, started 20:45:21.724 UTC | ✅ captured by the author (Slack mobile app) |
+| `12-slack-resolved.jpg` | Same thread, 20:51: **[RESOLVED]**. The 5.428% shown is the alert's last value while firing, which Alertmanager repeats in the resolved notice; it is not the error rate at recovery (see the postmortem) | ✅ captured by the author (Slack mobile app) |
 
 The optional Alertmanager shot was left out on purpose: its Status page prints the full config, including the Slack receiver.
 

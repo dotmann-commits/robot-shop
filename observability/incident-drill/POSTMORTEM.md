@@ -111,7 +111,7 @@ At 20:50:23 the alert still showed 5.43%, and it cleared at 20:50:39 at 4.30%. B
 
 **Monitoring gap after the drill (not a service fault):** the Windows System log shows the host entered Modern Standby at 20:46:31 and left it at 21:21:42. Prometheus kept a full set of scrapes until about 20:54 (20 of 20 per 5 min), so run 2's evidence is complete. After that, scrapes stopped from about 20:57 to 21:21. Right after wake, the 5-minute request rate briefly read 2.4–2.6 req/s because its window straddled the gap. The 2-minute rate at 21:24 was 5.77 req/s (cart 2.83, catalogue 2.94), in line with pre-drill traffic (`evidence/run2-slack/07-traffic-check.txt`).
 
-**What "verified" means here:** Alertmanager's own counters show two Slack sends (firing and resolved), each accepted by Slack's webhook endpoint, with zero failures of any kind. The message as it appears in the channel is to be confirmed by the author's screenshot. A search through the Claude Slack connector found no matching message (cause not confirmed; possibly a different workspace or search indexing).
+**What "verified" means here:** Alertmanager's own counters show two Slack sends (firing and resolved), each accepted by Slack's webhook endpoint, with zero failures of any kind. The author's screenshots confirm both messages in Slack channel #tickets (app "Robot Shop DevOps Alerts"): [FIRING] at 20:45 and [RESOLVED] at 20:51, both showing "Started 2026-10-28 20:45:21.724 UTC" and the runbook link (`screenshots/11-slack-firing.jpg`, `12-slack-resolved.jpg`). The RESOLVED message repeats the last value while firing (5.428%), not the error rate at recovery.
 
 ## Lessons
 
