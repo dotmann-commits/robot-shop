@@ -1,0 +1,48 @@
+# Project-Created File (NOT Instructor-Provided)
+# Repository: dotmann-commits/robot-shop
+# Purpose: ServiceMonitors for Prometheus Operator in namespace 'monitoring' to scrape
+# the four focus Robot Shop services (payment, cart, catalogue on port 'http', and web on port 'metrics').
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: robot-shop-app-services
+  namespace: monitoring
+  labels:
+    app: robot-shop
+spec:
+  jobLabel: service
+  namespaceSelector:
+    matchNames:
+      - robot-shop
+  selector:
+    matchExpressions:
+      - key: service
+        operator: In
+        values:
+          - payment
+          - cart
+          - catalogue
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: robot-shop-web-nginx
+  namespace: monitoring
+  labels:
+    app: robot-shop
+spec:
+  jobLabel: service
+  namespaceSelector:
+    matchNames:
+      - robot-shop
+  selector:
+    matchLabels:
+      service: web
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s

@@ -1,0 +1,36 @@
+== Loki labels available 2026-10-28T20:07:09Z
+{"status":"success","data":["container","job","level","namespace","pod","service"]}
+
+## sum by (service) (count_over_time({namespace="robot-shop", service="catalogue"} |= "MongoError" [1m]))
+   {'service': 'catalogue'}
+      19:54:00Z 5
+      19:55:00Z 2
+      19:56:00Z 8
+      19:57:00Z 5
+      19:58:00Z 7
+      19:59:00Z 9
+      20:00:00Z 6
+      20:01:00Z 6
+      20:02:00Z 8
+      20:03:00Z 6
+## sum by (service, level) (count_over_time({namespace="robot-shop", service="catalogue", level="error"} [1m]))
+   {'level': 'error', 'service': 'catalogue'}
+      19:50:00Z 11
+      19:51:00Z 13
+      19:52:00Z 13
+      19:53:00Z 26
+      19:54:00Z 16
+      19:55:00Z 4
+      19:56:00Z 16
+      19:57:00Z 10
+      19:58:00Z 14
+      19:59:00Z 18
+      20:00:00Z 12
+      20:01:00Z 12
+      20:02:00Z 16
+      20:03:00Z 12
+      20:04:00Z 4
+      20:05:00Z 11
+      20:06:00Z 22
+      20:07:00Z 10
+      20:08:00Z 4

@@ -1,0 +1,43 @@
+# Project-Created File (NOT Instructor-Provided)
+# Repository: dotmann-commits/robot-shop
+# Purpose: Capstone 2 Step 5 - route the Robot Shop SLO alert to Slack.
+#
+# The Slack Incoming Webhook URL is NOT stored in Git. Create the referenced Secret by hand first:
+#   read -rs SLACK_WEBHOOK_URL   # paste the webhook URL, press Enter
+#   kubectl -n robot-shop create secret generic alertmanager-slack-webhook --from-literal=url="$SLACK_WEBHOOK_URL"
+#   unset SLACK_WEBHOOK_URL
+#
+# The operator scopes this config to alerts carrying namespace="robot-shop" (OnNamespace matcher strategy).
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: robot-shop-slack
+  namespace: robot-shop
+  labels:
+    app: robot-shop
+spec:
+  route:
+    receiver: slack-robot-shop
+    groupBy: ['alertname', 'slo']
+    groupWait: 30s
+    groupInterval: 2m
+    repeatInterval: 1h
+    matchers:
+      - name: slo
+        value: robot-shop-availability
+        matchType: "="
+  receivers:
+    - name: slack-robot-shop
+      slackConfigs:
+        - apiURL:
+            name: alertmanager-slack-webhook
+            key: url
+          sendResolved: true
+          title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .CommonLabels.severity }})'
+          text: |-
+            {{ range .Alerts }}*{{ .Annotations.summary }}*
+            {{ .Annotations.description }}
+            *Runbook:* {{ .Annotations.runbook_url }}
+            *Dashboard:* {{ .Annotations.dashboard }}
+            *Started:* {{ .StartsAt }}
+            {{ end }}

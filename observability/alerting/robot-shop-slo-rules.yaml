@@ -1,0 +1,72 @@
+# Project-Created File (NOT Instructor-Provided)
+# Repository: dotmann-commits/robot-shop
+# Purpose: Capstone 2 Step 5 - availability SLI recording rules, error-budget tracking and
+# one actionable SLO alert for Robot Shop. Picked up by Prometheus because the
+# kube-prometheus-stack values set ruleSelectorNilUsesHelmValues: false.
+#
+# SLI scope: cart + catalogue (instrumented, customer-facing browse/cart path).
+# payment is excluded: the load generator runs with ERROR="1" and deliberately posts to
+# /pay/partner-57, which fails with HTTP 500 under the same route label (/pay/:id) as real
+# checkouts, so synthetic and real payment failures cannot be separated with labels.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: robot-shop-availability-slo
+  namespace: monitoring
+  labels:
+    app: robot-shop
+spec:
+  groups:
+    - name: robot-shop-availability-slo.recording
+      interval: 15s
+      rules:
+        - record: robotshop:sli_requests:rate5m
+          expr: sum by (namespace) (rate(http_requests_total{namespace="robot-shop", service=~"cart|catalogue"}[5m]))
+        - record: robotshop:sli_errors:rate5m
+          expr: |
+            sum by (namespace) (rate(http_requests_total{namespace="robot-shop", service=~"cart|catalogue", status=~"5.."}[5m]))
+              or
+            robotshop:sli_requests:rate5m * 0
+        - record: robotshop:availability_error_ratio:rate5m
+          expr: robotshop:sli_errors:rate5m / robotshop:sli_requests:rate5m
+        - record: robotshop:availability_error_ratio:rate1h
+          expr: |
+            (
+              sum by (namespace) (rate(http_requests_total{namespace="robot-shop", service=~"cart|catalogue", status=~"5.."}[1h]))
+                or
+              sum by (namespace) (rate(http_requests_total{namespace="robot-shop", service=~"cart|catalogue"}[1h])) * 0
+            )
+            /
+            sum by (namespace) (rate(http_requests_total{namespace="robot-shop", service=~"cart|catalogue"}[1h]))
+        - record: robotshop:availability_error_ratio:rate24h
+          expr: |
+            (
+              sum by (namespace) (increase(http_requests_total{namespace="robot-shop", service=~"cart|catalogue", status=~"5.."}[24h]))
+                or
+              sum by (namespace) (increase(http_requests_total{namespace="robot-shop", service=~"cart|catalogue"}[24h])) * 0
+            )
+            /
+            sum by (namespace) (increase(http_requests_total{namespace="robot-shop", service=~"cart|catalogue"}[24h]))
+        # 1 = full budget left, 0 = budget exhausted, negative = SLO breached. SLO target 99% => budget 1%.
+        - record: robotshop:availability_error_budget_remaining:ratio24h
+          expr: 1 - (robotshop:availability_error_ratio:rate24h / 0.01)
+
+    - name: robot-shop-availability-slo.alerts
+      interval: 15s
+      rules:
+        - alert: RobotShopAvailabilitySLOBurn
+          # 5% errors = 5x the 1% budget; sustained, it would spend the whole 24h budget in under 5 hours.
+          expr: robotshop:availability_error_ratio:rate5m > 0.05
+          for: 2m
+          labels:
+            severity: critical
+            slo: robot-shop-availability
+            team: robot-shop
+          annotations:
+            summary: Robot Shop availability SLO is burning error budget fast
+            description: >-
+              {{ $value | humanizePercentage }} of cart and catalogue requests returned HTTP 5xx over the
+              last 5 minutes (SLO allows 1%). Check which service and route are failing, then the
+              data stores they depend on (catalogue -> MongoDB, cart -> Redis/catalogue).
+            runbook_url: https://github.com/dotmann-commits/robot-shop/blob/master/observability/runbooks/robot-shop-availability-slo.md
+            dashboard: Grafana > Robot Shop Golden Signals

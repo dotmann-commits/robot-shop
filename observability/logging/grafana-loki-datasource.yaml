@@ -1,0 +1,23 @@
+# Project-Created File (NOT Instructor-Provided)
+# Repository: dotmann-commits/robot-shop
+# Purpose: Grafana sidecar-provisioned Loki datasource ConfigMap in namespace 'monitoring' for Capstone 2 Step 3 (Logs).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-grafana-datasource
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"
+    app: robot-shop
+data:
+  loki-datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki.monitoring.svc.cluster.local:3100
+        isDefault: false
+        jsonData:
+          maxLines: 1000

@@ -1,0 +1,118 @@
+[2026-10-28T20:00:23Z] ratio5m={'namespace': 'robot-shop'}=1 | sli_req={'namespace': 'robot-shop'}=0.10876963993740482 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=1e+00) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.1111135803017845
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Running r=0
+[2026-10-28T20:00:26Z] MITIGATE: kubectl -n robot-shop scale deploy/mongodb --replicas=1
+deployment.apps/mongodb scaled
+Waiting for deployment "mongodb" rollout to finish: 0 out of 1 new replicas have been updated...
+Waiting for deployment "mongodb" rollout to finish: 0 of 1 updated replicas are available...
+deployment "mongodb" successfully rolled out
+[2026-10-28T20:00:36Z] MongoDB deployment reports Ready
+[2026-10-28T20:00:36Z] ratio5m={'namespace': 'robot-shop'}=1 | sli_req={'namespace': 'robot-shop'}=0.11228070175438595 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=1e+00) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.11111358030178448
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:00:53Z] ratio5m={'namespace': 'robot-shop'}=1 | sli_req={'namespace': 'robot-shop'}=0.1157898799644911 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=1e+00) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.15555901242249828
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:01:11Z] ratio5m={'namespace': 'robot-shop'}=1 | sli_req={'namespace': 'robot-shop'}=0.11579313030937818 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=1e+00) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.0888869136241417
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:01:28Z] ratio5m={'namespace': 'robot-shop'}=1 | sli_req={'namespace': 'robot-shop'}=0.10526315789473684 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=1e+00) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.04444444444444444
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:01:45Z] ratio5m={'namespace': 'robot-shop'}=0.9677431403664055 | sli_req={'namespace': 'robot-shop'}=0.10877561108685986 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=9.677431403664055e-01) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.11111358030178448
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:02:02Z] ratio5m={'namespace': 'robot-shop'}=0.9705882352941176 | sli_req={'namespace': 'robot-shop'}=0.11929866420583932 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=9.705882352941176e-01) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.1333362963621414
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:02:18Z] ratio5m={'namespace': 'robot-shop'}=0.9714284740422583 | sli_req={'namespace': 'robot-shop'}=0.12280659895499287 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=9.722223169807326e-01) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.13332740767077017
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:02:36Z] ratio5m={'namespace': 'robot-shop'}=0.9729729729729729 | sli_req={'namespace': 'robot-shop'}=0.12982410588033028 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=9.729729729729729e-01) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.1777738272482834
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:02:37Z] catalogue still returning 5xx 0.1777738272482834/s two minutes after MongoDB Ready -> runbook step: rollout restart catalogue
+{"level":"error","time":1793217744515,"pid":1,"hostname":"catalogue-68c5546f4-zrk95","req":{"id":7296,"method":"GET","url":"/products","headers":{"x-instana-t":"afc672b7bfb584e4","x-instana-s":"fb5ce8246c9cf9b5","x-instana-l":"1","host":"catalogue:8080","connection":"close","user-agent":"python-requests/2.26.0","accept-encoding":"gzip, deflate, br","accept":"*/*","x-forwarded-for":"34.196.93.245"},"remoteAddress":"::ffff:10.244.1.35","remotePort":36076},"msg":"ERROR {\"name\":\"MongoError\"}","v":1}
+{"level":"info","time":1793217744516,"pid":1,"hostname":"catalogue-68c5546f4-zrk95","req":{"id":7296,"method":"GET","url":"/products","headers":{"x-instana-t":"afc672b7bfb584e4","x-instana-s":"fb5ce8246c9cf9b5","x-instana-l":"1","host":"catalogue:8080","connection":"close","user-agent":"python-requests/2.26.0","accept-encoding":"gzip, deflate, br","accept":"*/*","x-forwarded-for":"34.196.93.245"},"remoteAddress":"::ffff:10.244.1.35","remotePort":36076},"res":{"statusCode":500,"headers":{"x-powered-by":"Express","timing-allow-origin":"*","access-control-allow-origin":"*","content-type":"application/json; charset=utf-8","content-length":"21","etag":"W/\"15-EMoGneiftqz+KCF0T2RkXi5OKcA\""}},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at ServerResponse.onResFinished (/opt/server/node_modules/pino-http/logger.js:67:38)\n    at ServerResponse.emit (events.js:412:35)\n    at onFinish (_http_outgoing.js:792:10)\n    at callback (internal/streams/writable.js:513:21)\n    at afterWrite (internal/streams/writable.js:466:5)\n    at afterWriteTick (internal/streams/writable.js:453:10)\n    at processTicksAndRejections (internal/process/task_queues.js:81:21)"},"responseTime":0,"msg":"request errored ","v":1}
+{"level":"error","time":1793217744817,"pid":1,"hostname":"catalogue-68c5546f4-zrk95","req":{"id":7297,"method":"GET","url":"/products","headers":{"x-instana-t":"9238ba82a6646c4d","x-instana-s":"d9aa198a730a25c7","x-instana-l":"1","host":"catalogue:8080","connection":"close","user-agent":"python-requests/2.26.0","accept-encoding":"gzip, deflate, br","accept":"*/*","x-forwarded-for":"52.77.99.130"},"remoteAddress":"::ffff:10.244.1.35","remotePort":36078},"msg":"ERROR {\"name\":\"MongoError\"}","v":1}
+{"level":"info","time":1793217744817,"pid":1,"hostname":"catalogue-68c5546f4-zrk95","req":{"id":7297,"method":"GET","url":"/products","headers":{"x-instana-t":"9238ba82a6646c4d","x-instana-s":"d9aa198a730a25c7","x-instana-l":"1","host":"catalogue:8080","connection":"close","user-agent":"python-requests/2.26.0","accept-encoding":"gzip, deflate, br","accept":"*/*","x-forwarded-for":"52.77.99.130"},"remoteAddress":"::ffff:10.244.1.35","remotePort":36078},"res":{"statusCode":500,"headers":{"x-powered-by":"Express","timing-allow-origin":"*","access-control-allow-origin":"*","content-type":"application/json; charset=utf-8","content-length":"21","etag":"W/\"15-EMoGneiftqz+KCF0T2RkXi5OKcA\""}},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at ServerResponse.onResFinished (/opt/server/node_modules/pino-http/logger.js:67:38)\n    at ServerResponse.emit (events.js:412:35)\n    at onFinish (_http_outgoing.js:792:10)\n    at callback (internal/streams/writable.js:513:21)\n    at afterWrite (internal/streams/writable.js:466:5)\n    at afterWriteTick (internal/streams/writable.js:453:10)\n    at processTicksAndRejections (internal/process/task_queues.js:81:21)"},"responseTime":1,"msg":"request errored ","v":1}
+{"level":"error","time":1793217745215,"pid":1,"hostname":"catalogue-68c5546f4-zrk95","req":{"id":7298,"method":"GET","url":"/products","headers":{"x-instana-t":"4414f8813a03d440","x-instana-s":"19dccb54ca4bcbb0","x-instana-l":"1","host":"catalogue:8080","connection":"close","user-agent":"python-requests/2.26.0","accept-encoding":"gzip, deflate, br","accept":"*/*","x-forwarded-for":"156.33.241.5"},"remoteAddress":"::ffff:10.244.1.35","remotePort":36086},"msg":"ERROR {\"name\":\"MongoError\"}","v":1}
+{"level":"info","time":1793217745215,"pid":1,"hostname":"catalogue-68c5546f4-zrk95","req":{"id":7298,"method":"GET","url":"/products","headers":{"x-instana-t":"4414f8813a03d440","x-instana-s":"19dccb54ca4bcbb0","x-instana-l":"1","host":"catalogue:8080","connection":"close","user-agent":"python-requests/2.26.0","accept-encoding":"gzip, deflate, br","accept":"*/*","x-forwarded-for":"156.33.241.5"},"remoteAddress":"::ffff:10.244.1.35","remotePort":36086},"res":{"statusCode":500,"headers":{"x-powered-by":"Express","timing-allow-origin":"*","access-control-allow-origin":"*","content-type":"application/json; charset=utf-8","content-length":"21","etag":"W/\"15-EMoGneiftqz+KCF0T2RkXi5OKcA\""}},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at ServerResponse.onResFinished (/opt/server/node_modules/pino-http/logger.js:67:38)\n    at ServerResponse.emit (events.js:412:35)\n    at onFinish (_http_outgoing.js:792:10)\n    at callback (internal/streams/writable.js:513:21)\n    at afterWrite (internal/streams/writable.js:466:5)\n    at afterWriteTick (internal/streams/writable.js:453:10)\n    at processTicksAndRejections (internal/process/task_queues.js:81:21)"},"responseTime":1,"msg":"request errored ","v":1}
+{"level":"info","time":1793217745543,"pid":1,"hostname":"catalogue-68c5546f4-zrk95","req":{"id":7299,"method":"GET","url":"/metrics","headers":{"host":"10.244.1.47:8080","user-agent":"Prometheus/3.15.1","accept":"application/openmetrics-text;version=1.0.0;escaping=allow-utf-8;q=0.7,application/openmetrics-text;version=0.0.1;q=0.6,text/plain;version=1.0.0;escaping=allow-utf-8;q=0.5,text/plain;version=0.0.4;q=0.4,*/*;q=0.3","accept-encoding":"gzip","x-prometheus-scrape-timeout-seconds":"10"},"remoteAddress":"::ffff:10.244.1.30","remotePort":58434},"res":{"statusCode":200,"headers":{"x-powered-by":"Express","timing-allow-origin":"*","access-control-allow-origin":"*","content-type":"text/plain; charset=utf-8; version=0.0.4","content-length":"7297","etag":"W/\"1c81-5ZXaJc/cr02V3tylq5FkcbXMlkI\""}},"responseTime":1,"msg":"request completed","v":1}
+{"level":"error","time":1793217747810,"pid":1,"hostname":"catalogue-68c5546f4-zrk95","req":{"id":7300,"method":"GET","url":"/products","headers":{"x-instana-t":"dfd696f22462cae7","x-instana-s":"1bcebf62711df5de","x-instana-l":"1","host":"catalogue:8080","connection":"close","user-agent":"python-requests/2.26.0","accept-encoding":"gzip, deflate, br","accept":"*/*","x-forwarded-for":"192.241.230.151"},"remoteAddress":"::ffff:10.244.1.35","remotePort":59478},"msg":"ERROR {\"name\":\"MongoError\"}","v":1}
+{"level":"info","time":1793217747810,"pid":1,"hostname":"catalogue-68c5546f4-zrk95","req":{"id":7300,"method":"GET","url":"/products","headers":{"x-instana-t":"dfd696f22462cae7","x-instana-s":"1bcebf62711df5de","x-instana-l":"1","host":"catalogue:8080","connection":"close","user-agent":"python-requests/2.26.0","accept-encoding":"gzip, deflate, br","accept":"*/*","x-forwarded-for":"192.241.230.151"},"remoteAddress":"::ffff:10.244.1.35","remotePort":59478},"res":{"statusCode":500,"headers":{"x-powered-by":"Express","timing-allow-origin":"*","access-control-allow-origin":"*","content-type":"application/json; charset=utf-8","content-length":"21","etag":"W/\"15-EMoGneiftqz+KCF0T2RkXi5OKcA\""}},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at ServerResponse.onResFinished (/opt/server/node_modules/pino-http/logger.js:67:38)\n    at ServerResponse.emit (events.js:412:35)\n    at onFinish (_http_outgoing.js:792:10)\n    at callback (internal/streams/writable.js:513:21)\n    at afterWrite (internal/streams/writable.js:466:5)\n    at afterWriteTick (internal/streams/writable.js:453:10)\n    at processTicksAndRejections (internal/process/task_queues.js:81:21)"},"responseTime":1,"msg":"request errored ","v":1}
+{"name":"@instana/collector","__in":1,"hostname":"catalogue-68c5546f4-zrk95","pid":1,"module":"announceCycle/agentHostLookup","level":40,"msg":"Agent cannot be contacted via 127.0.0.1:42699 nor via default gateway 10.244.1.1:42699. Scheduling reattempt of agent host lookup in 60000 millis.","time":"2026-10-28T20:02:33.393Z","v":0}
+deployment.apps/catalogue restarted
+Waiting for deployment "catalogue" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "catalogue" rollout to finish: 1 old replicas are pending termination...
+deployment "catalogue" successfully rolled out
+[2026-10-28T20:02:40Z] catalogue restarted and Ready
+[2026-10-28T20:02:55Z] ratio5m={'namespace': 'robot-shop'}=0.972336769200517 | sli_req={'namespace': 'robot-shop'}=0.12683883365821963 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=9.72336769200517e-01) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: {'route': '/categories', 'service': 'catalogue'}=0; {'route': '/products', 'service': 'catalogue'}=0.2034552303486899
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-68c5546f4-zrk95 1/1 Terminating r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:03:12Z] ratio5m={'namespace': 'robot-shop'}=0.8657459944838436 | sli_req={'namespace': 'robot-shop'}=0.1306587402846628 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=8.657459944838436e-01) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:03:29Z] ratio5m={'namespace': 'robot-shop'}=0.4653993538207228 | sli_req={'namespace': 'robot-shop'}=0.24392050292397663 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=4.653993538207228e-01) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:03:46Z] ratio5m={'namespace': 'robot-shop'}=0.25201765541849597 | sli_req={'namespace': 'robot-shop'}=0.42399322222222224 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=2.5201765541849597e-01) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:04:03Z] ratio5m={'namespace': 'robot-shop'}=0.08355515462891053 | sli_req={'namespace': 'robot-shop'}=0.9901199309491677 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=1.5914052226714184e-01) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:04:20Z] ratio5m={'namespace': 'robot-shop'}=0.0654360656310377 | sli_req={'namespace': 'robot-shop'}=1.216698500974659 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=8.355515462891053e-02) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:04:39Z] ratio5m={'namespace': 'robot-shop'}=0.05142681632400208 | sli_req={'namespace': 'robot-shop'}=1.4883721741981215 | alert=firing(activeAt=2026-10-28T19:57:21.724049021Z,value=5.142681632400208e-02) | alertmanager=active(startsAt=2026-10-28T19:59:21.724Z,receivers=['null'])
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:04:57Z] ratio5m={'namespace': 'robot-shop'}=0.049026498130512006 | sli_req={'namespace': 'robot-shop'}=1.4996062792151261 | alert=inactive | alertmanager=none
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:05:14Z] ratio5m={'namespace': 'robot-shop'}=0.03448753635298623 | sli_req={'namespace': 'robot-shop'}=1.8308743418155453 | alert=inactive | alertmanager=none
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:05:32Z] ratio5m={'namespace': 'robot-shop'}=0.026950003950388834 | sli_req={'namespace': 'robot-shop'}=2.596814419222834 | alert=inactive | alertmanager=none
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:05:49Z] ratio5m={'namespace': 'robot-shop'}=0.016577809715988406 | sli_req={'namespace': 'robot-shop'}=3.0618193916356544 | alert=inactive | alertmanager=none
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:06:06Z] ratio5m={'namespace': 'robot-shop'}=0.014439479323622143 | sli_req={'namespace': 'robot-shop'}=3.339769547953216 | alert=inactive | alertmanager=none
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:06:23Z] ratio5m={'namespace': 'robot-shop'}=0.012501843804585846 | sli_req={'namespace': 'robot-shop'}=3.6866497498370077 | alert=inactive | alertmanager=none
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:06:40Z] ratio5m={'namespace': 'robot-shop'}=0.009152432956469175 | sli_req={'namespace': 'robot-shop'}=3.912002450141781 | alert=inactive | alertmanager=none
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+[2026-10-28T20:06:42Z] RECOVERED: alert inactive and 5m error ratio below 1%
+[2026-10-28T20:06:42Z] ratio5m={'namespace': 'robot-shop'}=0.009152432956469175 | sli_req={'namespace': 'robot-shop'}=3.912002450141781 | alert=inactive | alertmanager=none
+    5xx by route: (empty)
+    pods: cart-7898d57b65-96bsl 1/1 Running r=0,catalogue-df58bbf7c-mr7s7 1/1 Running r=0,mongodb-576687d7-zfwcr 1/1 Running r=0
+alertmanager now: none
+budget remaining (24h): {'namespace': 'robot-shop'}=0.8061978774734829
+error ratio 1h: {'namespace': 'robot-shop'}=0.003087760034932863
+NAME                        READY   STATUS    RESTARTS   AGE
+cart-7898d57b65-96bsl       1/1     Running   0          46m
+catalogue-df58bbf7c-mr7s7   1/1     Running   0          4m6s
+dispatch-94fb65c45-4l4zh    1/1     Running   0          29h
+load-7967d7df8d-89942       1/1     Running   0          59m
+mongodb-576687d7-zfwcr      1/1     Running   0          6m15s
+mysql-f78d7dfcc-6mcgj       1/1     Running   0          28h
+payment-7c695467b7-bxd4x    1/1     Running   0          46m
+rabbitmq-5b995bf86f-m5jfv   1/1     Running   0          28h
+ratings-6b79d9f5d4-tlwvx    1/1     Running   0          29h
+redis-0                     1/1     Running   0          29h
+shipping-7cc4d497c8-mb5d6   1/1     Running   0          59m
+user-575bd4557c-nxq44       1/1     Running   0          29h
+web-795f7cb475-4qb6q        2/2     Running   0          25h
+NAME                      READY   STATUS    RESTARTS      AGE
+db-5b8f566868-gthd2       1/1     Running   0             33h
+redis-5b65678587-g4ndj    1/1     Running   0             33h
+result-c9bc868d8-ltl8j    1/1     Running   0             32h
+vote-597789594b-ldqjv     1/1     Running   0             32h
+worker-7cf695c5b8-krd89   1/1     Running   3 (26h ago)   33h

@@ -1,0 +1,34 @@
+== Healthy baseline captured 2026-10-28T20:39:42Z
+kind-voting-app-cluster
+NAME                        READY   STATUS    RESTARTS   AGE
+cart-7898d57b65-96bsl       1/1     Running   0          79m
+catalogue-df58bbf7c-mr7s7   1/1     Running   0          37m
+dispatch-94fb65c45-4l4zh    1/1     Running   0          30h
+load-7967d7df8d-89942       1/1     Running   0          92m
+mongodb-576687d7-zfwcr      1/1     Running   0          39m
+mysql-f78d7dfcc-6mcgj       1/1     Running   0          28h
+payment-7c695467b7-bxd4x    1/1     Running   0          79m
+rabbitmq-5b995bf86f-m5jfv   1/1     Running   0          28h
+ratings-6b79d9f5d4-tlwvx    1/1     Running   0          30h
+redis-0                     1/1     Running   0          30h
+shipping-7cc4d497c8-mb5d6   1/1     Running   0          92m
+user-575bd4557c-nxq44       1/1     Running   0          30h
+web-795f7cb475-4qb6q        2/2     Running   0          26h
+NAME        READY   UP-TO-DATE   AVAILABLE   AGE
+mongodb     1/1     1            1           30h
+catalogue   1/1     1            1           30h
+cart        1/1     1            1           30h
+-- SLI
+robotshop:sli_requests:rate5m = {'namespace': 'robot-shop'}=5.6982551800889665
+robotshop:availability_error_ratio:rate5m = {'namespace': 'robot-shop'}=0
+robotshop:availability_error_ratio:rate1h = {'namespace': 'robot-shop'}=0.003208791429958597
+robotshop:availability_error_budget_remaining:ratio24h = {'namespace': 'robot-shop'}=0.8493511121604868
+alert = inactive
+alertmanager = none
+-- default namespace (Capstone 1, read only)
+NAME                      READY   STATUS    RESTARTS      AGE
+db-5b8f566868-gthd2       1/1     Running   0             33h
+redis-5b65678587-g4ndj    1/1     Running   0             33h
+result-c9bc868d8-ltl8j    1/1     Running   0             33h
+vote-597789594b-ldqjv     1/1     Running   0             33h
+worker-7cf695c5b8-krd89   1/1     Running   3 (26h ago)   33h

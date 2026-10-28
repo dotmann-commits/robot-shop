@@ -1,0 +1,12 @@
+checked 2026-10-28T20:52:52Z
+alertmanager alert: none
+-- alertmanager_notifications (direct from Alertmanager /metrics, slack only)
+alertmanager_notifications_failed_total{integration="slack",reason="authError"} 0
+alertmanager_notifications_failed_total{integration="slack",reason="clientError"} 0
+alertmanager_notifications_failed_total{integration="slack",reason="contextCanceled"} 0
+alertmanager_notifications_failed_total{integration="slack",reason="contextDeadlineExceeded"} 0
+alertmanager_notifications_failed_total{integration="slack",reason="other"} 0
+alertmanager_notifications_failed_total{integration="slack",reason="rateLimited"} 0
+alertmanager_notifications_failed_total{integration="slack",reason="serverError"} 0
+alertmanager_notifications_total{integration="slack"} 2
+-- alertmanager logs mentioning notify/slack (URLs redacted)

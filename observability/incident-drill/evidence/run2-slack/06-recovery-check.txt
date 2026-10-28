@@ -1,0 +1,65 @@
+== generated 2026-10-28T21:23:40Z
+## 5xx per second by service (1m window: are errors still occurring?)
+   {'service': 'catalogue'}
+      20:47:00 0.2000
+      20:47:30 0.1556
+      20:48:00 0.1556
+      20:48:30 0.2667
+      20:49:00 0.0807
+## error ratio, 1m window
+   {}
+      20:47:00 1.0000
+      20:47:30 1.0000
+      20:48:00 1.0000
+      20:48:30 1.0000
+      20:49:00 0.0917
+      20:49:30 0.0000
+      20:50:00 0.0000
+      20:50:30 0.0000
+      20:51:00 0.0000
+      20:51:30 0.0000
+      20:52:00 0.0000
+      20:52:30 0.0000
+      20:53:00 0.0000
+      20:53:30 0.0000
+      20:54:00 0.0000
+      20:54:30 0.0000
+      20:55:00 0.0000
+## error ratio, 5m window (SLI used by the alert)
+   {'namespace': 'robot-shop'}
+      20:47:00 1.0000
+      20:47:30 1.0000
+      20:48:00 1.0000
+      20:48:30 1.0000
+      20:49:00 0.5981
+      20:49:30 0.1299
+      20:50:00 0.0883
+      20:50:30 0.0543
+      20:51:00 0.0346
+      20:51:30 0.0228
+      20:52:00 0.0137
+      20:52:30 0.0120
+      20:53:00 0.0047
+      20:53:30 0.0000
+      20:54:00 0.0000
+      20:54:30 0.0000
+      20:55:00 0.0000
+      20:55:30 0.0000
+      20:56:00 0.0000
+## NOW
+ratio5m={'namespace': 'robot-shop'}=0
+5xx/s last 5m by service, route=(empty)
+sli requests/s={'namespace': 'robot-shop'}=2.4097168888888887
+alert=inactive
+## dependencies
+cart-7898d57b65-96bsl 1/1 Running restarts=0 123m
+catalogue-79856f5688-9xhhh 1/1 Running restarts=0 35m
+load-7967d7df8d-89942 1/1 Running restarts=0 136m
+mongodb-576687d7-rzr4p 1/1 Running restarts=0 37m
+redis-0 1/1 Running restarts=0 30h
+web-795f7cb475-4qb6q 2/2 Running restarts=0 26h
+catalogue MongoError lines since 20:49Z: 0
+catalogue log lines with statusCode 5xx since 20:49Z: 0
+cart error-level lines since 20:49Z: 0
+redis PING: PONG
+mongodb ping: 1

@@ -1,0 +1,151 @@
+# Project-Created File (NOT Instructor-Provided)
+# Repository: dotmann-commits/robot-shop
+# Purpose: Fluent Bit DaemonSet in namespace 'monitoring' shipping Robot Shop container logs to Loki
+# with structured labels for 'service' and 'level' (error, warn, info) for Capstone 2 Step 3 (Logs).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: monitoring
+  labels:
+    app: fluent-bit
+data:
+  parsers.conf: |
+    [PARSER]
+        Name        cri
+        Format      regex
+        Regex       ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]+) (?<log>.*)$
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+
+  enrich.lua: |
+    function enrich_log(tag, timestamp, record)
+        local fname = record["filename"] or ""
+        -- Match /var/log/containers/<pod>_<namespace>_<container>-<hash>.log
+        local pod, ns, container = string.match(fname, "/var/log/containers/([^_]+)_([^_]+)_(.+)%-[0-9a-f]+%.log$")
+        if not pod then
+            pod = "unknown"
+            ns = "robot-shop"
+            container = "unknown"
+        end
+
+        local service = container
+        if container == "nginx-exporter" then
+            service = "web"
+        elseif service == "unknown" then
+            service = string.match(pod, "^([a-z]+)") or "unknown"
+        end
+
+        local msg = record["log"] or ""
+        local lower_msg = string.lower(msg)
+        local level = "info"
+
+        -- Drop high-frequency /metrics scrape log lines so application logs stay clean
+        if string.find(msg, "GET /metrics", 1, true) or string.find(msg, '"url":"/metrics"', 1, true) then
+            return -1, timestamp, record
+        end
+
+        -- Classify error vs warn vs info across Pino JSON, Flask/uWSGI, Nginx, Spring Boot, and data stores
+        if string.find(lower_msg, '"level":"error"', 1, true)
+            or string.find(lower_msg, '"level":50', 1, true)
+            or string.find(msg, '"statusCode":5', 1, true)
+            or string.find(msg, "ERROR", 1, true)
+            or string.find(msg, "Error:", 1, true)
+            or string.find(msg, "Exception", 1, true)
+            or string.find(msg, "Traceback", 1, true)
+            or string.find(msg, "(HTTP/1.1 5", 1, true)
+            or string.find(msg, 'HTTP/1.1" 50', 1, true) then
+            level = "error"
+        elseif string.find(lower_msg, '"level":"warn"', 1, true)
+            or string.find(lower_msg, '"level":40', 1, true)
+            or string.find(msg, '"statusCode":4', 1, true)
+            or string.find(msg, "WARN", 1, true)
+            or string.find(msg, "WARNING", 1, true)
+            or string.find(msg, "(HTTP/1.1 4", 1, true)
+            or string.find(msg, 'HTTP/1.1" 40', 1, true) then
+            level = "warn"
+        end
+
+        record["namespace"] = ns
+        record["pod"] = pod
+        record["container"] = container
+        record["service"] = service
+        record["level"] = level
+        return 1, timestamp, record
+    end
+
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush        2
+        Daemon       Off
+        Log_Level    info
+        Parsers_File parsers.conf
+
+    [INPUT]
+        Name             tail
+        Tag              kube.*
+        Path             /var/log/containers/*_robot-shop_*.log
+        Parser           cri
+        Path_Key         filename
+        Read_From_Head   True
+        DB               /tmp/flb_robot_shop.db
+        Mem_Buf_Limit    10MB
+        Skip_Long_Lines  On
+        Refresh_Interval 5
+
+    [FILTER]
+        Name    lua
+        Match   kube.*
+        script  /fluent-bit/etc/enrich.lua
+        call    enrich_log
+
+    [OUTPUT]
+        Name         loki
+        Match        kube.*
+        Host         loki.monitoring.svc.cluster.local
+        Port         3100
+        Labels       job=fluent-bit, namespace=$namespace, service=$service, pod=$pod, container=$container, level=$level
+        line_format  key_value
+        remove_keys  filename,stream,logtag,namespace,service,pod,container
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  namespace: monitoring
+  labels:
+    app: fluent-bit
+spec:
+  selector:
+    matchLabels:
+      app: fluent-bit
+  template:
+    metadata:
+      labels:
+        app: fluent-bit
+    spec:
+      containers:
+        - name: fluent-bit
+          image: fluent/fluent-bit:3.1.9
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+            - name: config
+              mountPath: /fluent-bit/etc/
+              readOnly: true
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: config
+          configMap:
+            name: fluent-bit-config

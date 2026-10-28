@@ -1,0 +1,228 @@
+# Project-Created File (NOT Instructor-Provided)
+# Repository: dotmann-commits/robot-shop
+# Purpose: Grafana sidecar-provisioned ConfigMap for the Robot Shop Golden Signals dashboard.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: robot-shop-golden-signals-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: '1'
+    app: robot-shop
+data:
+  robot-shop-golden-signals.json: "{\n  \"__comment\": \"Project-Created File (NOT\
+    \ Instructor-Provided) - Robot Shop Golden Signals Dashboard for Capstone 2 Step\
+    \ 2\",\n  \"annotations\": {\n    \"list\": [\n      {\n        \"builtIn\": 1,\n\
+    \        \"datasource\": {\n          \"type\": \"grafana\",\n          \"uid\"\
+    : \"-- Grafana --\"\n        },\n        \"enable\": true,\n        \"hide\":\
+    \ true,\n        \"iconColor\": \"rgba(0, 211, 255, 1)\",\n        \"name\": \"\
+    Annotations & Alerts\",\n        \"type\": \"dashboard\"\n      }\n    ]\n  },\n\
+    \  \"editable\": true,\n  \"fiscalYearStartMonth\": 0,\n  \"graphTooltip\": 1,\n\
+    \  \"id\": null,\n  \"links\": [],\n  \"panels\": [\n    {\n      \"datasource\"\
+    : {\n        \"type\": \"prometheus\",\n        \"uid\": \"prometheus\"\n    \
+    \  },\n      \"description\": \"Scrape target availability (1 = UP, 0 = DOWN)\
+    \ for all four Robot Shop focus services.\",\n      \"fieldConfig\": {\n     \
+    \   \"defaults\": {\n          \"color\": {\n            \"mode\": \"thresholds\"\
+    \n          },\n          \"mappings\": [\n            {\n              \"options\"\
+    : {\n                \"0\": {\n                  \"color\": \"red\",\n       \
+    \           \"index\": 1,\n                  \"text\": \"DOWN\"\n            \
+    \    },\n                \"1\": {\n                  \"color\": \"green\",\n \
+    \                 \"index\": 0,\n                  \"text\": \"UP\"\n        \
+    \        }\n              },\n              \"type\": \"value\"\n            }\n\
+    \          ],\n          \"thresholds\": {\n            \"mode\": \"absolute\"\
+    ,\n            \"steps\": [\n              {\n                \"color\": \"red\"\
+    ,\n                \"value\": null\n              },\n              {\n      \
+    \          \"color\": \"green\",\n                \"value\": 1\n             \
+    \ }\n            ]\n          }\n        },\n        \"overrides\": []\n     \
+    \ },\n      \"gridPos\": {\n        \"h\": 5,\n        \"w\": 8,\n        \"x\"\
+    : 0,\n        \"y\": 0\n      },\n      \"id\": 1,\n      \"options\": {\n   \
+    \     \"colorMode\": \"background\",\n        \"graphMode\": \"none\",\n     \
+    \   \"justifyMode\": \"center\",\n        \"orientation\": \"horizontal\",\n \
+    \       \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"textMode\": \"value_and_name\"\n      },\n      \"targets\"\
+    : [\n        {\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"prometheus\"\n          },\n          \"expr\": \"up{namespace=\\\
+    \"robot-shop\\\"}\",\n          \"legendFormat\": \"{{service}}\",\n         \
+    \ \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Focus Services Target\
+    \ Status (UP)\",\n      \"type\": \"stat\"\n    },\n    {\n      \"datasource\"\
+    : {\n        \"type\": \"prometheus\",\n        \"uid\": \"prometheus\"\n    \
+    \  },\n      \"description\": \"Preserved original Robot Shop business metrics\
+    \ from cart (items_added) and payment (sold_count_total).\",\n      \"fieldConfig\"\
+    : {\n        \"defaults\": {\n          \"color\": {\n            \"mode\": \"\
+    palette-classic\"\n          },\n          \"unit\": \"short\"\n        },\n \
+    \       \"overrides\": []\n      },\n      \"gridPos\": {\n        \"h\": 5,\n\
+    \        \"w\": 8,\n        \"x\": 8,\n        \"y\": 0\n      },\n      \"id\"\
+    : 2,\n      \"options\": {\n        \"colorMode\": \"value\",\n        \"graphMode\"\
+    : \"area\",\n        \"justifyMode\": \"auto\",\n        \"orientation\": \"horizontal\"\
+    ,\n        \"reduceOptions\": {\n          \"calcs\": [\n            \"lastNotNull\"\
+    \n          ],\n          \"fields\": \"\",\n          \"values\": false\n   \
+    \     },\n        \"textMode\": \"value_and_name\"\n      },\n      \"targets\"\
+    : [\n        {\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"prometheus\"\n          },\n          \"expr\": \"items_added{namespace=\\\
+    \"robot-shop\\\"}\",\n          \"legendFormat\": \"cart: items_added\",\n   \
+    \       \"refId\": \"A\"\n        },\n        {\n          \"datasource\": {\n\
+    \            \"type\": \"prometheus\",\n            \"uid\": \"prometheus\"\n\
+    \          },\n          \"expr\": \"sold_count_total{namespace=\\\"robot-shop\\\
+    \"}\",\n          \"legendFormat\": \"payment: sold_count_total\",\n         \
+    \ \"refId\": \"B\"\n        }\n      ],\n      \"title\": \"Preserved Business\
+    \ Counters (Cart & Payment)\",\n      \"type\": \"stat\"\n    },\n    {\n    \
+    \  \"datasource\": {\n        \"type\": \"prometheus\",\n        \"uid\": \"prometheus\"\
+    \n      },\n      \"description\": \"Active client connections on the web Nginx\
+    \ reverse proxy.\",\n      \"fieldConfig\": {\n        \"defaults\": {\n     \
+    \     \"color\": {\n            \"mode\": \"palette-classic\"\n          },\n\
+    \          \"unit\": \"short\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 5,\n        \"w\": 8,\n        \"x\": 16,\n\
+    \        \"y\": 0\n      },\n      \"id\": 3,\n      \"options\": {\n        \"\
+    legend\": {\n          \"calcs\": [\n            \"mean\",\n            \"max\"\
+    ,\n            \"lastNotNull\"\n          ],\n          \"displayMode\": \"list\"\
+    ,\n          \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n \
+    \         \"mode\": \"single\"\n        }\n      },\n      \"targets\": [\n  \
+    \      {\n          \"datasource\": {\n            \"type\": \"prometheus\",\n\
+    \            \"uid\": \"prometheus\"\n          },\n          \"expr\": \"nginx_connections_active{namespace=\\\
+    \"robot-shop\\\"}\",\n          \"legendFormat\": \"web active connections\",\n\
+    \          \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Web Frontend\
+    \ Active Connections (Saturation)\",\n      \"type\": \"timeseries\"\n    },\n\
+    \    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"\
+    uid\": \"prometheus\"\n      },\n      \"description\": \"Golden Signal 1 (Traffic):\
+    \ Total HTTP requests/sec handled by the web Nginx frontend.\",\n      \"fieldConfig\"\
+    : {\n        \"defaults\": {\n          \"color\": {\n            \"mode\": \"\
+    palette-classic\"\n          },\n          \"unit\": \"reqps\"\n        },\n \
+    \       \"overrides\": []\n      },\n      \"gridPos\": {\n        \"h\": 8,\n\
+    \        \"w\": 8,\n        \"x\": 0,\n        \"y\": 5\n      },\n      \"id\"\
+    : 4,\n      \"options\": {\n        \"legend\": {\n          \"calcs\": [\n  \
+    \          \"mean\",\n            \"max\",\n            \"lastNotNull\"\n    \
+    \      ],\n          \"displayMode\": \"table\",\n          \"placement\": \"\
+    bottom\"\n        },\n        \"tooltip\": {\n          \"mode\": \"multi\"\n\
+    \        }\n      },\n      \"targets\": [\n        {\n          \"datasource\"\
+    : {\n            \"type\": \"prometheus\",\n            \"uid\": \"prometheus\"\
+    \n          },\n          \"expr\": \"rate(nginx_http_requests_total{namespace=\\\
+    \"robot-shop\\\"}[2m])\",\n          \"legendFormat\": \"web (nginx)\",\n    \
+    \      \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Golden Signal\
+    \ \\u2014 Web Request Rate (RPS)\",\n      \"type\": \"timeseries\"\n    },\n\
+    \    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n        \"\
+    uid\": \"prometheus\"\n      },\n      \"description\": \"Golden Signal 1 (Traffic):\
+    \ Total HTTP requests/sec across catalogue, cart, and payment.\",\n      \"fieldConfig\"\
+    : {\n        \"defaults\": {\n          \"color\": {\n            \"mode\": \"\
+    palette-classic\"\n          },\n          \"unit\": \"reqps\"\n        },\n \
+    \       \"overrides\": []\n      },\n      \"gridPos\": {\n        \"h\": 8,\n\
+    \        \"w\": 8,\n        \"x\": 8,\n        \"y\": 5\n      },\n      \"id\"\
+    : 5,\n      \"options\": {\n        \"legend\": {\n          \"calcs\": [\n  \
+    \          \"mean\",\n            \"max\",\n            \"lastNotNull\"\n    \
+    \      ],\n          \"displayMode\": \"table\",\n          \"placement\": \"\
+    bottom\"\n        },\n        \"tooltip\": {\n          \"mode\": \"multi\"\n\
+    \        }\n      },\n      \"targets\": [\n        {\n          \"datasource\"\
+    : {\n            \"type\": \"prometheus\",\n            \"uid\": \"prometheus\"\
+    \n          },\n          \"expr\": \"sum by (service) (rate(http_requests_total{namespace=\\\
+    \"robot-shop\\\"}[2m]))\",\n          \"legendFormat\": \"{{service}}\",\n   \
+    \       \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Golden Signal\
+    \ \\u2014 Backend Request Rate by Service (RPS)\",\n      \"type\": \"timeseries\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"prometheus\"\n      },\n      \"description\": \"Golden Signal\
+    \ 1 (Traffic): HTTP requests/sec broken down by service, normalized route pattern,\
+    \ and HTTP status code.\",\n      \"fieldConfig\": {\n        \"defaults\": {\n\
+    \          \"color\": {\n            \"mode\": \"palette-classic\"\n         \
+    \ },\n          \"unit\": \"reqps\"\n        },\n        \"overrides\": []\n \
+    \     },\n      \"gridPos\": {\n        \"h\": 8,\n        \"w\": 8,\n       \
+    \ \"x\": 16,\n        \"y\": 5\n      },\n      \"id\": 6,\n      \"options\"\
+    : {\n        \"legend\": {\n          \"calcs\": [\n            \"mean\",\n  \
+    \          \"lastNotNull\"\n          ],\n          \"displayMode\": \"table\"\
+    ,\n          \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n \
+    \         \"mode\": \"multi\"\n        }\n      },\n      \"targets\": [\n   \
+    \     {\n          \"datasource\": {\n            \"type\": \"prometheus\",\n\
+    \            \"uid\": \"prometheus\"\n          },\n          \"expr\": \"sum\
+    \ by (service, route, status) (rate(http_requests_total{namespace=\\\"robot-shop\\\
+    \"}[2m]))\",\n          \"legendFormat\": \"{{service}} {{route}} [{{status}}]\"\
+    ,\n          \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Request\
+    \ Rate by Normalized Route & Status (RPS)\",\n      \"type\": \"timeseries\"\n\
+    \    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n \
+    \       \"uid\": \"prometheus\"\n      },\n      \"description\": \"Golden Signal\
+    \ 2 (Errors): Rate of HTTP 5xx server error responses per second by service.\"\
+    ,\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\": {\n\
+    \            \"mode\": \"palette-classic\"\n          },\n          \"unit\":\
+    \ \"reqps\"\n        },\n        \"overrides\": []\n      },\n      \"gridPos\"\
+    : {\n        \"h\": 8,\n        \"w\": 12,\n        \"x\": 0,\n        \"y\":\
+    \ 13\n      },\n      \"id\": 7,\n      \"options\": {\n        \"legend\": {\n\
+    \          \"calcs\": [\n            \"mean\",\n            \"max\",\n       \
+    \     \"lastNotNull\"\n          ],\n          \"displayMode\": \"table\",\n \
+    \         \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n    \
+    \      \"mode\": \"multi\"\n        }\n      },\n      \"targets\": [\n      \
+    \  {\n          \"datasource\": {\n            \"type\": \"prometheus\",\n   \
+    \         \"uid\": \"prometheus\"\n          },\n          \"expr\": \"(sum by\
+    \ (service) (rate(http_requests_total{namespace=\\\"robot-shop\\\",status=~\\\"\
+    5..\\\"}[2m])) or 0 * sum by (service) (rate(http_requests_total{namespace=\\\"\
+    robot-shop\\\"}[2m])))\",\n          \"legendFormat\": \"{{service}} 5xx RPS\"\
+    ,\n          \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Golden\
+    \ Signal \\u2014 HTTP 5xx Error Rate by Service (RPS)\",\n      \"type\": \"timeseries\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"prometheus\"\n      },\n      \"description\": \"Golden Signal\
+    \ 2 (Errors): Percentage of requests returning HTTP 5xx per service.\",\n    \
+    \  \"fieldConfig\": {\n        \"defaults\": {\n          \"color\": {\n     \
+    \       \"mode\": \"palette-classic\"\n          },\n          \"unit\": \"percent\"\
+    \n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n    \
+    \    \"h\": 8,\n        \"w\": 12,\n        \"x\": 12,\n        \"y\": 13\n  \
+    \    },\n      \"id\": 8,\n      \"options\": {\n        \"legend\": {\n     \
+    \     \"calcs\": [\n            \"mean\",\n            \"max\",\n            \"\
+    lastNotNull\"\n          ],\n          \"displayMode\": \"table\",\n         \
+    \ \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n          \"\
+    mode\": \"multi\"\n        }\n      },\n      \"targets\": [\n        {\n    \
+    \      \"datasource\": {\n            \"type\": \"prometheus\",\n            \"\
+    uid\": \"prometheus\"\n          },\n          \"expr\": \"100 * (sum by (service)\
+    \ (rate(http_requests_total{namespace=\\\"robot-shop\\\",status=~\\\"5..\\\"}[2m]))\
+    \ or 0 * sum by (service) (rate(http_requests_total{namespace=\\\"robot-shop\\\
+    \"}[2m]))) / clamp_min(sum by (service) (rate(http_requests_total{namespace=\\\
+    \"robot-shop\\\"}[2m])), 1e-9)\",\n          \"legendFormat\": \"{{service}} 5xx\
+    \ %\",\n          \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Golden\
+    \ Signal \\u2014 HTTP 5xx Error Ratio by Service (%)\",\n      \"type\": \"timeseries\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"prometheus\"\n      },\n      \"description\": \"Golden Signal\
+    \ 3 (Latency): 95th percentile HTTP request duration in seconds by service.\"\
+    ,\n      \"fieldConfig\": {\n        \"defaults\": {\n          \"color\": {\n\
+    \            \"mode\": \"palette-classic\"\n          },\n          \"unit\":\
+    \ \"s\"\n        },\n        \"overrides\": []\n      },\n      \"gridPos\": {\n\
+    \        \"h\": 8,\n        \"w\": 12,\n        \"x\": 0,\n        \"y\": 21\n\
+    \      },\n      \"id\": 9,\n      \"options\": {\n        \"legend\": {\n   \
+    \       \"calcs\": [\n            \"mean\",\n            \"max\",\n          \
+    \  \"lastNotNull\"\n          ],\n          \"displayMode\": \"table\",\n    \
+    \      \"placement\": \"bottom\"\n        },\n        \"tooltip\": {\n       \
+    \   \"mode\": \"multi\"\n        }\n      },\n      \"targets\": [\n        {\n\
+    \          \"datasource\": {\n            \"type\": \"prometheus\",\n        \
+    \    \"uid\": \"prometheus\"\n          },\n          \"expr\": \"histogram_quantile(0.95,\
+    \ sum by (le, service) (rate(http_request_duration_seconds_bucket{namespace=\\\
+    \"robot-shop\\\"}[2m])))\",\n          \"legendFormat\": \"{{service}} p95\",\n\
+    \          \"refId\": \"A\"\n        }\n      ],\n      \"title\": \"Golden Signal\
+    \ \\u2014 HTTP Request Latency p95 by Service (s)\",\n      \"type\": \"timeseries\"\
+    \n    },\n    {\n      \"datasource\": {\n        \"type\": \"prometheus\",\n\
+    \        \"uid\": \"prometheus\"\n      },\n      \"description\": \"Golden Signal\
+    \ 3 (Latency): p50, p95, and p99 HTTP request duration quantiles across catalogue,\
+    \ cart, and payment.\",\n      \"fieldConfig\": {\n        \"defaults\": {\n \
+    \         \"color\": {\n            \"mode\": \"palette-classic\"\n          },\n\
+    \          \"unit\": \"s\"\n        },\n        \"overrides\": []\n      },\n\
+    \      \"gridPos\": {\n        \"h\": 8,\n        \"w\": 12,\n        \"x\": 12,\n\
+    \        \"y\": 21\n      },\n      \"id\": 10,\n      \"options\": {\n      \
+    \  \"legend\": {\n          \"calcs\": [\n            \"mean\",\n            \"\
+    max\",\n            \"lastNotNull\"\n          ],\n          \"displayMode\":\
+    \ \"table\",\n          \"placement\": \"bottom\"\n        },\n        \"tooltip\"\
+    : {\n          \"mode\": \"multi\"\n        }\n      },\n      \"targets\": [\n\
+    \        {\n          \"datasource\": {\n            \"type\": \"prometheus\"\
+    ,\n            \"uid\": \"prometheus\"\n          },\n          \"expr\": \"histogram_quantile(0.50,\
+    \ sum by (le, service) (rate(http_request_duration_seconds_bucket{namespace=\\\
+    \"robot-shop\\\"}[2m])))\",\n          \"legendFormat\": \"{{service}} p50\",\n\
+    \          \"refId\": \"A\"\n        },\n        {\n          \"datasource\":\
+    \ {\n            \"type\": \"prometheus\",\n            \"uid\": \"prometheus\"\
+    \n          },\n          \"expr\": \"histogram_quantile(0.95, sum by (le, service)\
+    \ (rate(http_request_duration_seconds_bucket{namespace=\\\"robot-shop\\\"}[2m])))\"\
+    ,\n          \"legendFormat\": \"{{service}} p95\",\n          \"refId\": \"B\"\
+    \n        },\n        {\n          \"datasource\": {\n            \"type\": \"\
+    prometheus\",\n            \"uid\": \"prometheus\"\n          },\n          \"\
+    expr\": \"histogram_quantile(0.99, sum by (le, service) (rate(http_request_duration_seconds_bucket{namespace=\\\
+    \"robot-shop\\\"}[2m])))\",\n          \"legendFormat\": \"{{service}} p99\",\n\
+    \          \"refId\": \"C\"\n        }\n      ],\n      \"title\": \"Golden Signal\
+    \ \\u2014 HTTP Latency Quantiles (p50 / p95 / p99)\",\n      \"type\": \"timeseries\"\
+    \n    }\n  ],\n  \"refresh\": \"15s\",\n  \"schemaVersion\": 39,\n  \"tags\":\
+    \ [\n    \"robot-shop\",\n    \"golden-signals\",\n    \"sre\",\n    \"capstone-2\"\
+    \n  ],\n  \"templating\": {\n    \"list\": []\n  },\n  \"time\": {\n    \"from\"\
+    : \"now-15m\",\n    \"to\": \"now\"\n  },\n  \"timepicker\": {},\n  \"timezone\"\
+    : \"browser\",\n  \"title\": \"Robot Shop \\u2014 Golden Signals (Request Rate,\
+    \ Error Rate, Latency)\",\n  \"uid\": \"robot-shop-golden-signals\",\n  \"version\"\
+    : 1\n}"
